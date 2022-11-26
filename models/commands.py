@@ -1,8 +1,9 @@
-from enum import Enum
+from enum import StrEnum
 
-class Command(Enum):
+class Command(StrEnum):
     FIND = 'FIND'
     DEFINE = 'DEFINE'
     SOLVE = 'SOLVE'
     VISUALIZE = 'VISUALIZE'
+    HELP = 'HELP'
     ALL = 'ALL'

@@ -1,6 +1,8 @@
-from enum import Enum
+from enum import StrEnum
 
-class Operator(Enum):
-    OR = 1
-    AND = 2
-    NOT = 3 # keyed by precedence
+class Operator(StrEnum):
+    OR = '|'
+    AND = '&'
+    NOT = '!'
+    LEFT_PARENTHESIS = '('
+    RIGHT_PARENTHESIS = ')'
