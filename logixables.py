@@ -9,9 +9,8 @@ def execute_command(subcommands: list):
     command_keyword = subcommands[0]
     if command_keyword == Command.DEFINE:
         logixable = parser.parse_function_signature(subcommands[1])
-        postfix_input = parser.parse_function_definition(subcommands[2], logixable.args)
-
-        logixable.definition = LogixableDefinition()
+        logixable_def = parser.parse_function_definition(subcommands[2], logixable.args)
+        logixable.definition = logixable_def
         logixables.append(logixable)
     elif command_keyword == Command.SOLVE:
         pass
