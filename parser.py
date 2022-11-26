@@ -79,10 +79,15 @@ class Parser:
         if not self.__balanced_parentheses(func_def):
             raise ValueError("Function definition has an unbalanced number of parentheses!")
 
+    # recursively validates allowed args in inner functions and so on; TODO: this should probably happen while the tree is constructed 
     def __validate_allowed_args(self, split_postfix: str, allowed_args: list):
         in_function = False
         logixable_names = [logixable.name for logixable in logixables]
+        operators = [o.value for o in Operator]
         for index, token in enumerate(split_postfix):
+            if token in operators:
+                continue
+
             if token in logixable_names:
                 in_function = True
                 continue
@@ -90,13 +95,16 @@ class Parser:
             if in_function and token in logixable_names:
                 self.__validate_allowed_args(split_postfix[index:], allowed_args)
 
-            while token[-1] == ',' and in_function:
+            if in_function:
+                if token[-1] != ',':
+                    in_function = False
+
+                clean_token = token[:-1]
+                if clean_token not in allowed_args:
+                    raise ValueError('Argument \'%s\' in definition is not defined in allowed arguments!' % clean_token)
+            else:
                 if token not in allowed_args:
-                    raise ValueError("Argument %s in definition is not defined in allowed arguments!" % token[:-1])
-
-            in_function = False
-
-        pass
+                    raise ValueError('Argument \'%s\' in definition is not defined in allowed arguments!' % token)
 
     def __parse_truth_table(self):
         pass
