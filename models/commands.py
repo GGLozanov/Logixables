@@ -7,3 +7,4 @@ class Command(StrEnum):
     VISUALIZE = 'VISUALIZE'
     HELP = 'HELP'
     ALL = 'ALL'
+    EXIT = 'EXIT'

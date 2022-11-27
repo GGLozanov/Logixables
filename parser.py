@@ -1,8 +1,10 @@
 from data_structs.stack import Stack, StackNode
 from models.commands import Command
-from models.logixable import Logixable, LogixableDefinition
 from models.operators import Operator
-from logixables import logixables;
+import models.logixable as logix_blueprint
+
+# TODO: DEFINE ACCEPTABLE CHARSET FOR ARGS (ASCII?)
+# TODO: HANDLE DIFFERENT PARENTHESES OBFUSCATING INPUT
 
 class Parser:
     # returns list of subcommands (keywords, inputs, etc.) split by ' '
@@ -25,7 +27,7 @@ class Parser:
     # parse a function definition from DEFINE and return
     # this treats postfix for now
     # returns a logixable w/o a definition
-    def parse_function_signature(self, func: str) -> Logixable:
+    def parse_function_signature(self, func: str) -> logix_blueprint.Logixable:
         self.__validate_function_sig_syntax(func)
 
         arg_start = 0
@@ -45,20 +47,31 @@ class Parser:
                 if not func_args:
                     func_args = self.__split(input[arg_start:arg_end], ', ') # try w/ space if it doesn't work
 
-        return Logixable(func_name, func_args)
+        return logix_blueprint.Logixable(func_name, func_args)
     
-    def __validate_function_sig_syntax(self, func_sig: str):
-        # check has "(" and next parentheses have "):" ONLY AT THE END OF THE STRING
-        # otherwise invalid func declaration
-        # check "):" ends the string, otherwise ALWAYS error
-            
-        pass
+    def __validate_function_sig_syntax(self, func_sig: str, check_for_colon: bool = True):
+        if not func_sig or len(func_sig) <= 2:
+            raise ValueError("Function signature cannot be empty/invalid!")
+    
+        left_parentheses_count = func_sig.count(Operator.LEFT_PARENTHESIS)
+        right_parentheses_count = func_sig.count(Operator.RIGHT_PARENTHESIS)
 
-    def parse_function_definition(self, definition: str, allowed_args: list) -> LogixableDefinition:
+        if left_parentheses_count != 1 or right_parentheses_count != 1:
+            raise ValueError("Function signature should have only one pair of parentheses!")
+
+        if func_sig[0] == Operator.LEFT_PARENTHESIS:
+            raise ValueError("Function signature must have argument signature denoted at a valid starting position!")
+
+        if check_for_colon:
+            if func_sig[-1] != ':' or func_sig[-2] != Operator.RIGHT_PARENTHESIS:
+                raise ValueError("Invalid function signature! Function signature must contain colon and closing parenthesis!")
+        elif func_sig[-1] != Operator.RIGHT_PARENTHESIS:
+            raise ValueError("Function signature within function definition requires closing parethesis!")
+
+    def parse_function_definition(self, definition: str, allowed_args: list) -> logix_blueprint.LogixableDefinition:
         # handle split by ' ' and no space POSTFIX (later infix)
-        # handle "" and having no ""
-        # no handling of if no space between ":" and definition
-        # detect unallowed args used (easy with ' ' but if spliced together, check if contains? Harder to implement) 
+        # no handling of if no space between ":" and definition -> prolly not
+        # detect unallowed args used (easy with ' ' but if spliced together, check if contains? Harder to implement) -> assume spaces as of now
         self.__validate_function_def_syntax(func_def=definition)
 
         # remove quotes if there are
@@ -68,49 +81,20 @@ class Parser:
         # assume tokens split by space as for now and that they are postfix
         postfix = self.__split(definition, ' ')
 
-        self.__validate_allowed_args(postfix, allowed_args)
-
-        return LogixableDefinition(postfix)
+        return logix_blueprint.LogixableDefinition(postfix, allowed_args)
     
     def __validate_function_def_syntax(self, func_def: str):
         if not func_def:
             raise ValueError("Function definition cannot be empty!")
 
         if not self.__balanced_parentheses(func_def):
-            raise ValueError("Function definition has an unbalanced number of parentheses!")
+            raise ValueError("Function definition has an unbalanced number of parentheses!")    
 
-    # recursively validates allowed args in inner functions and so on; TODO: this should probably happen while the tree is constructed 
-    def __validate_allowed_args(self, split_postfix: str, allowed_args: list):
-        in_function = False
-        logixable_names = [logixable.name for logixable in logixables]
-        operators = [o.value for o in Operator]
-        for index, token in enumerate(split_postfix):
-            if token in operators:
-                continue
-
-            if token in logixable_names:
-                in_function = True
-                continue
-
-            if in_function and token in logixable_names:
-                self.__validate_allowed_args(split_postfix[index:], allowed_args)
-
-            if in_function:
-                if token[-1] != ',':
-                    in_function = False
-
-                clean_token = token[:-1]
-                if clean_token not in allowed_args:
-                    raise ValueError('Argument \'%s\' in definition is not defined in allowed arguments!' % clean_token)
-            else:
-                if token not in allowed_args:
-                    raise ValueError('Argument \'%s\' in definition is not defined in allowed arguments!' % token)
-
-    def __parse_truth_table(self):
+    def parse_truth_table(self):
         pass
 
     # checks only for '(' and ')'
-    def __balanced_parentheses(input):
+    def __balanced_parentheses(input) -> bool:
         parentheses = Stack()
 
         for char in input:

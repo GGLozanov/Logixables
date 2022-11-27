@@ -1,9 +1,11 @@
-from parser import Parser
+import parser as p
 from models.commands import Command
-from models.logixable import Logixable, LogixableDefinition
+from models.logixable import Logixable
+from file_handler import FileHandler
 
 logixables: list[Logixable] = []
-parser = Parser()
+parser = p.Parser()
+file_handler = FileHandler()
 
 def execute_command(subcommands: list):
     command_keyword = subcommands[0]
@@ -13,6 +15,7 @@ def execute_command(subcommands: list):
         logixable.definition = logixable_def
         logixables.append(logixable)
     elif command_keyword == Command.SOLVE:
+        # logixable = parser.parse_logixable_name_from_signature()
         pass
     elif command_keyword == Command.ALL:
         pass
@@ -29,10 +32,11 @@ def main():
     print("Welcome to Logixables! Please, enter a valid command to get started!\n")
     print("Valid commands are: DEFINE, SOLVE, FIND, ALL, VISUALIZE, HELP, EXIT")
 
-    while inp := input() != 'EXIT':
+    while inp := input() != Command.Exit:
         try:
             subcommands = parser.parse_command(inp)
             # always has at least 2 commands
+            print("-----------------\n")
             execute_command(subcommands)
             print("-----------------\n")       
         except ValueError as err:
