@@ -4,9 +4,9 @@ class StackNode:
         self.prev = None
 
 class Stack:
-    def __init__(self, head: StackNode) -> None:
+    def __init__(self, head: StackNode | None = None) -> None:
         self.head = head
-        self.size = 1
+        self.size = 0 if head is None else 1
 
     def push(self, node: StackNode):
         node.prev = self.head

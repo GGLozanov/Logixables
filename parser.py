@@ -1,7 +1,7 @@
 from data_structs.stack import Stack, StackNode
 from models.commands import Command
 from models.operators import Operator
-import models.logixable as logix_blueprint
+from models.logixable import *
 
 # TODO: DEFINE ACCEPTABLE CHARSET FOR ARGS (ASCII?)
 # TODO: HANDLE DIFFERENT PARENTHESES OBFUSCATING INPUT
@@ -13,21 +13,22 @@ class Parser:
             raise ValueError('Command cannot be empty!')
         
         subcommands = self.__split(command, ' ')
-
-        if subcommands[0] not in Command:
+        commands = [c.value for c in Command]
+        def_command = self.upper(subcommands[0])
+        if def_command not in commands:
             raise ValueError('Command not in defined commands! Please, enter a valid command!')
 
-        if not subcommands[1]:
-            raise ValueError('Invalid function definiton! Cannot be empty!')
+        if (def_command != Command.EXIT or Command.HELP) and len(commands) < 2:
+            raise ValueError('Invalid command argument! Cannot be empty!')
         
         # min requirement is 2 subcommands/inputs
         
-        return list
+        return subcommands
 
     # parse a function definition from DEFINE and return
     # this treats postfix for now
     # returns a logixable w/o a definition
-    def parse_function_signature(self, func: str) -> logix_blueprint.Logixable:
+    def parse_function_signature(self, func: str) -> Logixable:
         self.__validate_function_sig_syntax(func)
 
         arg_start = 0
@@ -47,7 +48,7 @@ class Parser:
                 if not func_args:
                     func_args = self.__split(input[arg_start:arg_end], ', ') # try w/ space if it doesn't work
 
-        return logix_blueprint.Logixable(func_name, func_args)
+        return Logixable(func_name, func_args)
     
     def __validate_function_sig_syntax(self, func_sig: str, check_for_colon: bool = True):
         if not func_sig or len(func_sig) <= 2:
@@ -68,7 +69,7 @@ class Parser:
         elif func_sig[-1] != Operator.RIGHT_PARENTHESIS:
             raise ValueError("Function signature within function definition requires closing parethesis!")
 
-    def parse_function_definition(self, definition: str, allowed_args: list) -> logix_blueprint.LogixableDefinition:
+    def parse_function_definition(self, definition: str, allowed_args: list) -> LogixableDefinition:
         # handle split by ' ' and no space POSTFIX (later infix)
         # no handling of if no space between ":" and definition -> prolly not
         # detect unallowed args used (easy with ' ' but if spliced together, check if contains? Harder to implement) -> assume spaces as of now
@@ -81,7 +82,7 @@ class Parser:
         # assume tokens split by space as for now and that they are postfix
         postfix = self.__split(definition, ' ')
 
-        return logix_blueprint.LogixableDefinition(postfix, allowed_args)
+        return LogixableDefinition(postfix, allowed_args)
     
     def __validate_function_def_syntax(self, func_def: str):
         if not func_def:
@@ -94,7 +95,7 @@ class Parser:
         pass
 
     # checks only for '(' and ')'
-    def __balanced_parentheses(input) -> bool:
+    def __balanced_parentheses(self, input) -> bool:
         parentheses = Stack()
 
         for char in input:
@@ -106,12 +107,12 @@ class Parser:
         return parentheses.is_empty()
     
     # TODO: This should replace `__parseFunction` when infix is supported
-    def shunting_yard(self, ):
+    def shunting_yard(self):
         # check num of opening braces == num of closing braces (balanced braces; stack)
         operators = Stack(StackNode())
         operands = Stack(StackNode()) 
 
-    def __split(input, delimiter):
+    def __split(self, input, delimiter) -> list[str]:
         if not delimiter:
             raise ValueError("Empty Separator")
 
@@ -129,3 +130,6 @@ class Parser:
         result.append(input[start:index + 1])
         
         return result
+
+    def upper(self, input: str):
+        return "".join(map(lambda c: chr(ord(c) - 32) if 97 <= ord(c) <= 122 else c, input))
