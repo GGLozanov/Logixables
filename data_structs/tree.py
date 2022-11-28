@@ -4,9 +4,14 @@ class TreeNode:
         self.value = value
 
     def __str__(self) -> str:
-        # TODO: Serialise tree for file
-        return ""
+        return "Value %s -> %s" % (self.value, self.children)
+
+    def __repr__(self):
+        return self.__str__()
 
 class Tree:
     def __init__(self, root: 'TreeNode'):
         self.root = root
+
+    def __str__(self) -> str:
+        return "{ %s }" % self.root

@@ -1,6 +1,7 @@
 from data_structs.stack import StackNode, Stack
 from data_structs.tree import TreeNode, Tree
 from models.operators import Operator
+from utils.consume import consume
 
 class LogixableDefinition:
     # logixable_arg_relation = [(Logixable1, ['a', 'b']), (Logixable1, ['b', 'c'])] -> arg pattern matchup (from allowed args for current logixable) for inner logixables. Lookup consists of search **BY LOGIXABLE REFERENCE** (a.k.a. use "is")
@@ -8,7 +9,9 @@ class LogixableDefinition:
     def __init__(self, split_postfix: list, allowed_args: list):
         self.split_postfix_input = split_postfix
         self.__last_validated_logixable_idx_offset = 0
-        self.expr_tree = Tree(self.__build_expression_tree(split_postfix, allowed_args))
+        self.__tree_builder = Stack()
+        self.expr_tree = Tree(self.__build_expression_tree(split_postfix, allowed_args, tree_builder=self.__tree_builder))
+        print(self.expr_tree)
 
     def __build_expression_tree(self, split_postfix: list, allowed_args: list, in_function: bool = False, tree_builder: Stack = Stack()) -> TreeNode:
         # "func3(a, b): func1(a, func2(a, b)) & a" or in postfix: func1 a, func2 a, b a &
@@ -23,35 +26,38 @@ class LogixableDefinition:
         operators = [o.value for o in Operator]
         parsed_inner_args = 0
 
-        for index in range(split_postfix):
+        iter_range = iter(range(len(split_postfix)))
+        for index in iter_range:
             token = split_postfix[index]
             if not token:
                 raise ValueError("Empty token in postfix expression at %s index!" % index)
 
-           # function (the one defined here) inside function (the one called top-level) inside function (the one defined OVERALL for this LogixableDefinition)
-            if in_function and len(cur_inner_logixable.args) == parsed_inner_args:
+            # function (the one defined here) inside function (the one called top-level) inside function (the one defined OVERALL for this LogixableDefinition)
+            # print("UPP LOGIX: " + str(upper_logixable) if upper_logixable is not None else 'NOTHING')
+            # print("PARSED INN_ : " + str(parsed_inner_args))
+            if in_function and len(allowed_args) == parsed_inner_args:
                 # parsed all available/correct inner args; means next stuff cannot be an inner function argument, but a new node w/ a new function call w/ an operator attached later on!
                 parsed_inner_args = 0
-                self.__last_validated_logixable_idx_offset = index # idx offset to add after going back to top-level recursion
+                self.__last_validated_logixable_idx_offset = index # idx offset to add after going back to top-level recursion (not +1  to cause reiteration and check for all conditions again)
                 return TreeNode(None, func_arg_children) # value node; return only operands because there are no more inner functions (impossible)
 
             if token in logixable_names:
-                cur_inner_logixable = (l for l in logixables if token == l.name).next()
-                cur_inner_logixable_arg_count = len(cur_inner_logixable.allowed_args)
+                cur_inner_logixable = next(l for l in logixables if token == l.name)
+                cur_inner_logixable_arg_count = len(cur_inner_logixable.args)
 
                 # this should return a node that describes "func func a" or "func1 a b, b a * +" 
                 # recursion until exit node and then add this one BIG logixable node and its arg relations children (whether they be args or logixables) to the tree
                 parsed_inner_args += 1
-                func_node = self.__build_expression_tree(split_postfix[index:], True, tree_builder)
+                func_node = self.__build_expression_tree(split_postfix[index+1:], cur_inner_logixable.args, True, tree_builder)
 
-                total_node = TreeNode(func_node.children + func_arg_children, func_node.value)
+                total_node = TreeNode((func_node.value or []) + func_arg_children, cur_inner_logixable)
                 if in_function:
-                    return TreeNode(total_node, cur_inner_logixable)
+                    return total_node
                 else:
                     tree_builder.push(StackNode(total_node))
-                    index += self.__last_validated_logixable_idx_offset
+                    consume(iter_range, self.__last_validated_logixable_idx_offset)
             elif token in operators:
-                if token == Operator.LEFT_PARENTHESIS or Operator.RIGHT_PARENTHESIS:
+                if token == Operator.LEFT_PARENTHESIS or token == Operator.RIGHT_PARENTHESIS:
                     raise ValueError("Invalid input! Postfix expressions should not have parentheses!")
 
                 new_node = None
@@ -60,9 +66,6 @@ class LogixableDefinition:
                     left = tree_builder.pop().value
                     new_node = TreeNode([left, right], token)
                 else:
-                    if in_function:
-                        # TODO: How to scope "!" sign?!
-                        pass
                     unary = tree_builder.pop().value
                     new_node = TreeNode([unary], token)
 
@@ -75,7 +78,7 @@ class LogixableDefinition:
                     continue
             
                 # ----- Handle invalid argument count for function ----
-                if parsed_inner_args > cur_inner_logixable_arg_count:
+                if parsed_inner_args > len(allowed_args):
                     raise ValueError('Invalid argument count for function \'%s\'! Expected count was %s arguments but received %s instead!' % cur_inner_logixable.name, cur_inner_logixable_arg_count, parsed_inner_args)
 
                 clean_token = token
@@ -90,7 +93,7 @@ class LogixableDefinition:
         self.__last_validated_logixable_idx_offset = 0
         top_node = tree_builder.pop()
 
-        if not tree_builder.is_empty:
+        if not tree_builder.is_empty():
             raise ValueError('Invalid input! Please, check your expression syntax! Expression tree builder stack is not empty!')
 
         return top_node.value
@@ -128,6 +131,9 @@ class Logixable:
 
     def visualize(self):
         pass
+
+    def __str__(self) -> str:
+        return "Name: %s. Allowed args: %s" % (self.name, self.args)
 
 # global list of defined logixables for the program at any point; TODO: Save somewhere else
 logixables: list[Logixable] = []

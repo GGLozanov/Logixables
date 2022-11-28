@@ -14,9 +14,9 @@ class Stack:
         self.size += 1
 
     def pop(self) -> StackNode:
-        if size <= 0:
+        if self.size <= 0:
             raise Exception("Cannot pop a stack with no elements!")
-        size -= 1
+        self.size -= 1
         pop = self.head
         self.head = self.head.prev
         return pop
@@ -31,6 +31,9 @@ class Stack:
     def __str__(self) -> str:
         result = ""
         temp = self.head
+        if temp is None:
+            return "Empty"
+
         while temp.prev != None:
             result += temp 
             if temp.prev != None:

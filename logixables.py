@@ -6,13 +6,25 @@ import file_handler as fh
 parser = p.Parser()
 file_handler = fh.FileHandler()
 
-def execute_command(subcommands: list):
+def execute_command(subcommands: list[str]):
     command_keyword = parser.upper(subcommands[0])
     if command_keyword == Command.DEFINE:
-        logixable = parser.parse_function_signature(subcommands[1])
-        logixable_def = parser.parse_function_definition(subcommands[2], logixable.args)
+        original_command = ' '.join(subcommands)  # parsing is special here so reset back to original input (kinda bad FIXME)
+        
+        logixable_signature = parser.extract_function_declaration_signature(original_command)
+        logixable = parser.parse_function_signature(logixable_signature)
+        logixable_names = [l.name for l in logixables]
+
+        if logixable.name in logixable_names:
+            raise ValueError("Cannot define a logixable with the same name!") # TODO: Support method overloading lol
+        
+        command_after_signature = parser.subtract(original_command, subcommands[0] + ' ' + logixable_signature)
+        logixable_definition = parser.extract_function_definition(command_after_signature) 
+        logixable_def = parser.parse_function_definition(logixable_definition, logixable.args)
+        
         logixable.definition = logixable_def
         logixables.append(logixable)
+        print("Successfully added function with name '%s' to the logixables!" % logixable.name)
     elif command_keyword == Command.SOLVE:
         # logixable = parser.parse_logixable_name_from_signature()
         pass
@@ -23,8 +35,8 @@ def execute_command(subcommands: list):
     elif command_keyword == Command.VISUALIZE:
         pass
     elif command_keyword == Command.HELP:
-        print("DEFINE Syntax: \'DEFINE func_name(arguments): \"expression\"\'. \nAllowed operators: \"&\", \'!\', \'|\'.")
-        print("\nExpression defined w/ DEFINE must have spaces between operators and operands!")
+        print("1. DEFINE Syntax: \'DEFINE func_name(arguments): \"postfix expression\"\'. \nAllowed operators: \"&\", \'!\', \'|\'.")
+        print("Expression defined with DEFINE must have spaces between arguments in functions, operators, and operands! The function definition must also be wrapped in quotes!")
         # TODO: define other commands
     elif command_keyword == Command.EXIT:
         print('EXITING NOW!')
