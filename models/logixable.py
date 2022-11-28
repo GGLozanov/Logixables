@@ -29,14 +29,14 @@ class LogixableDefinition:
             if not token:
                 raise ValueError("Empty token in postfix expression at %s index!" % index)
 
-            if token in logixable_names:
-                # function (the one defined here) inside function (the one called top-level) inside function (the one defined OVERALL for this LogixableDefinition)
-                if in_function and len(cur_inner_logixable.args) == parsed_inner_args:
-                    # parsed all available/correct inner args; means next stuff cannot be an inner function argument, but a new node w/ a new function call w/ an operator attached later on!
-                    parsed_inner_args = 0
-                    self.__last_validated_logixable_idx_offset = index # idx offset to add after going back to top-level recursion
-                    return TreeNode(None, func_arg_children) # value node; return only operands because there are no more inner functions (impossible)
+           # function (the one defined here) inside function (the one called top-level) inside function (the one defined OVERALL for this LogixableDefinition)
+            if in_function and len(cur_inner_logixable.args) == parsed_inner_args:
+                # parsed all available/correct inner args; means next stuff cannot be an inner function argument, but a new node w/ a new function call w/ an operator attached later on!
+                parsed_inner_args = 0
+                self.__last_validated_logixable_idx_offset = index # idx offset to add after going back to top-level recursion
+                return TreeNode(None, func_arg_children) # value node; return only operands because there are no more inner functions (impossible)
 
+            if token in logixable_names:
                 cur_inner_logixable = (l for l in logixables if token == l.name).next()
                 cur_inner_logixable_arg_count = len(cur_inner_logixable.allowed_args)
 
@@ -61,12 +61,14 @@ class LogixableDefinition:
                     left = tree_builder.pop().value
                     new_node = TreeNode([left, right], token)
                 else:
+                    if in_function:
+                        # TODO: How to scope "!" sign?!
+                        pass
                     unary = tree_builder.pop().value
                     new_node = TreeNode([unary], token)
 
                 tree_builder.push(StackNode(new_node))
             else:
-                # MARK: Operands
                 if not in_function:
                     if token not in allowed_args:
                         raise ValueError('Argument \'%s\' in definition is not defined in allowed arguments!' % token)
