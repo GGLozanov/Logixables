@@ -16,7 +16,6 @@ class LogixableDefinition:
             # func(func(a)) + func1(a+b, b*a)*a 
             # postfix: func func a func1 a b, b a * + a * +
         # IF in_function AND space between args: operation inside func (not function call). IMPORTANT: Count pairs of no comma between and iterate until  find that many operators
-
         logixable_names = [logixable.name for logixable in logixables]
         cur_inner_logixable: Logixable = None
         cur_inner_logixable_arg_count = None

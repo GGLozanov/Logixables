@@ -18,7 +18,7 @@ class Parser:
         if def_command not in commands:
             raise ValueError('Command not in defined commands! Please, enter a valid command!')
 
-        if (def_command != Command.EXIT or Command.HELP) and len(commands) < 2:
+        if len(subcommands) < 2 and def_command != Command.EXIT and def_command != Command.HELP:
             raise ValueError('Invalid command argument! Cannot be empty!')
         
         # min requirement is 2 subcommands/inputs
