@@ -155,6 +155,7 @@ class Parser:
                 return input[index:]
             if char == delimiter:
                 threshold += 1
+        return input
 
     def __split(self, input, delimiter) -> list[str]:
         if not delimiter:

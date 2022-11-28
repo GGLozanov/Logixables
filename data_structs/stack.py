@@ -3,6 +3,9 @@ class StackNode:
         self.value = value
         self.prev = None
 
+    def __str__(self) -> str:
+        return str(self.value)
+
 class Stack:
     def __init__(self, head: StackNode | None = None) -> None:
         self.head = head
@@ -15,7 +18,7 @@ class Stack:
 
     def pop(self) -> StackNode:
         if self.size <= 0:
-            raise Exception("Cannot pop a stack with no elements!")
+            raise ValueError("Cannot pop a stack with no elements!")
         self.size -= 1
         pop = self.head
         self.head = self.head.prev
@@ -31,11 +34,12 @@ class Stack:
     def __str__(self) -> str:
         result = ""
         temp = self.head
-        if temp is None:
+        if self.size == 0 :
             return "Empty"
 
         while temp.prev != None:
-            result += temp 
+            result += str(temp) 
             if temp.prev != None:
                 result += "<-"
             temp = temp.prev
+        return result

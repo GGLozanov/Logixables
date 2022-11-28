@@ -13,7 +13,8 @@ class LogixableDefinition:
         self.expr_tree = Tree(self.__build_expression_tree(split_postfix, allowed_args, tree_builder=self.__tree_builder))
         print(self.expr_tree)
 
-    def __build_expression_tree(self, split_postfix: list, allowed_args: list, in_function: bool = False, tree_builder: Stack = Stack()) -> TreeNode:
+    # this method makes me want to commit seppuku
+    def __build_expression_tree(self, split_postfix: list, allowed_args: list, upper_logixable: 'Logixable' = None, tree_builder: Stack = Stack()) -> TreeNode:
         # "func3(a, b): func1(a, func2(a, b)) & a" or in postfix: func1 a, func2 a, b a &
         # example complex input:
             # func(func(a)) + func1(a+b, b*a)*a 
@@ -25,6 +26,7 @@ class LogixableDefinition:
         func_arg_children: list[TreeNode] = [] # argument mapping for a func's args if inside a function
         operators = [o.value for o in Operator]
         parsed_inner_args = 0
+        in_function = upper_logixable is not None
 
         iter_range = iter(range(len(split_postfix)))
         for index in iter_range:
@@ -37,8 +39,8 @@ class LogixableDefinition:
             # print("PARSED INN_ : " + str(parsed_inner_args))
             if in_function and len(allowed_args) == parsed_inner_args:
                 # parsed all available/correct inner args; means next stuff cannot be an inner function argument, but a new node w/ a new function call w/ an operator attached later on!
+                self.__last_validated_logixable_idx_offset += parsed_inner_args # idx offset to add after going back to top-level recursion (not +1  to cause reiteration and check for all conditions again)
                 parsed_inner_args = 0
-                self.__last_validated_logixable_idx_offset = index # idx offset to add after going back to top-level recursion (not +1  to cause reiteration and check for all conditions again)
                 return TreeNode(None, func_arg_children) # value node; return only operands because there are no more inner functions (impossible)
 
             if token in logixable_names:
@@ -48,14 +50,17 @@ class LogixableDefinition:
                 # this should return a node that describes "func func a" or "func1 a b, b a * +" 
                 # recursion until exit node and then add this one BIG logixable node and its arg relations children (whether they be args or logixables) to the tree
                 parsed_inner_args += 1
-                func_node = self.__build_expression_tree(split_postfix[index+1:], cur_inner_logixable.args, True, tree_builder)
+                func_node = self.__build_expression_tree(split_postfix[index+1:], cur_inner_logixable.args, cur_inner_logixable, tree_builder)
 
-                total_node = TreeNode((func_node.value or []) + func_arg_children, cur_inner_logixable)
+                total_children = [func_node, *func_arg_children] if func_node.value is not list else func_node.value + func_arg_children
+                total_node = TreeNode(total_children, cur_inner_logixable)
                 if in_function:
+                    self.__last_validated_logixable_idx_offset += len(upper_logixable.args)
                     return total_node
                 else:
                     tree_builder.push(StackNode(total_node))
                     consume(iter_range, self.__last_validated_logixable_idx_offset)
+                    self.__last_validated_logixable_idx_offset = 0
             elif token in operators:
                 if token == Operator.LEFT_PARENTHESIS or token == Operator.RIGHT_PARENTHESIS:
                     raise ValueError("Invalid input! Postfix expressions should not have parentheses!")
@@ -133,7 +138,10 @@ class Logixable:
         pass
 
     def __str__(self) -> str:
-        return "Name: %s. Allowed args: %s" % (self.name, self.args)
+        return "(Name: %s. Allowed args: %s)" % (self.name, self.args)
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
 # global list of defined logixables for the program at any point; TODO: Save somewhere else
 logixables: list[Logixable] = []

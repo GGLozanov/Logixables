@@ -4,7 +4,7 @@ class TreeNode:
         self.value = value
 
     def __str__(self) -> str:
-        return "Value %s -> %s" % (self.value, self.children)
+        return "(Value %s -> %s)" % (self.value, self.children)
 
     def __repr__(self):
         return self.__str__()
