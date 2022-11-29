@@ -14,49 +14,49 @@ class LogixableDefinition:
         print(self.expr_tree)
 
     # this method makes me want to commit seppuku
-    # TODO: Handle func(a | b, b) etc.
+    # TODO: Handle func(a | b, b) etc. by treating operands as functions and going in recursion for them too (this would be hard because of current postfix notation schema)
+    # TODO: Maybe initiate search for operator when find "a b," pair of func args and then attach to first operator (non-recursive)
     def __build_expression_tree(self, split_postfix: list, allowed_args: list, upper_logixable: 'Logixable' = None, tree_builder: Stack = Stack()) -> TreeNode:
-        # "func3(a, b): func1(a, func2(a, b)) & a" or in postfix: func1 a, func2 a, b a &
-        # example complex input:
-            # func(func(a)) + func1(a+b, b*a)*a 
-            # postfix: func func a func1 a b, b a * + a * +
-        # IF in_function AND space between args: operation inside func (not function call). IMPORTANT: Count pairs of no comma between and iterate until find that many operators
         logixable_names = [logixable.name for logixable in logixables]
+
+        operators = [o.value for o in Operator]
         cur_inner_logixable: Logixable = None
         cur_inner_logixable_arg_count = None
+
         func_arg_children: list[TreeNode] = [] # argument mapping for a func's args if inside a function
-        operators = [o.value for o in Operator]
         parsed_inner_args = 0
         in_function = upper_logixable is not None
 
         postfix_token_length = range(len(split_postfix))
         iter_range = iter(postfix_token_length)
+
         for index in iter_range:
             token = split_postfix[index]
-            print("TKN: " + token)
             if not token:
                 raise ValueError("Empty token in postfix expression at %s index!" % index)
 
             # function (the one defined here) inside function (the one called top-level) inside function (the one defined OVERALL for this LogixableDefinition)
-            # print("UPP LOGIX: " + str(upper_logixable) if upper_logixable is not None else 'NOTHING')
-            # print("PARSED INN_ : " + str(parsed_inner_args))
             if in_function and len(allowed_args) == parsed_inner_args:
                 # parsed all available/correct inner args; means next stuff cannot be an inner function argument, but a new node w/ a new function call w/ an operator attached later on!
                 self.__last_validated_logixable_idx_offset += parsed_inner_args # idx offset to add after going back to top-level recursion (not +1  to cause reiteration and check for all conditions again)
-                parsed_inner_args = 0
+                
+                # clean func context here but it doesn't matter
+                # parsed_inner_args = 0
+
                 return TreeNode(None, func_arg_children) # value node; return only operands because there are no more inner functions (impossible)
 
             if token in logixable_names:
+                if not in_function:
+                    parsed_inner_args = 0
+
                 cur_inner_logixable = next(l for l in logixables if token == l.name)
                 cur_inner_logixable_arg_count = len(cur_inner_logixable.args)
 
                 # this should return a node that describes "func func a" or "func1 a b, b a * +" 
                 # recursion until exit node and then add this one BIG logixable node and its arg relations children (whether they be args or logixables) to the tree
-                parsed_inner_args += 1
-                print("ENTERING REC;")
                 func_node = self.__build_expression_tree(split_postfix[index+1:], cur_inner_logixable.args, cur_inner_logixable, tree_builder)
 
-                total_children = [func_node, *func_arg_children] if func_node.value is not list else func_node.value + func_arg_children
+                total_children = [func_node, *func_arg_children] if not isinstance(func_node.value, list) else func_node.value + func_arg_children
 
                 total_node = TreeNode(total_children, cur_inner_logixable)
                 if in_function:
@@ -65,15 +65,21 @@ class LogixableDefinition:
                 else: 
                     # if node not exists w/ value cur_inner_logixable: add
                     # otherwise append to children
-                    existing_node = self.__find_logixable_in_tree_builder(cur_inner_logixable, tree_builder)
-                    if existing_node is None:  
+                    parsed_inner_args += self.__calculate_top_func_children_len(total_children)
+
+                    still_in_func = parsed_inner_args != 0 and parsed_inner_args != cur_inner_logixable_arg_count
+                    if not still_in_func:
+                        parsed_inner_args = 0
+                        cur_inner_logixable = None
+                        cur_inner_logixable_arg_count = None
                         tree_builder.push(StackNode(total_node))
                     else:
-                        existing_node.value.add_children(total_children)
+                        self.__add_to_top_node_children(total_node, tree_builder)
 
                     # handle if a new function is next to call
-                    total_offset = self.__last_validated_logixable_idx_offset + index
-                    if total_offset in postfix_token_length and split_postfix[total_offset] in logixable_names:
+                    # total_offset = self.__last_validated_logixable_idx_offset + index
+                    # total_offset in postfix_token_length and split_postfix[total_offset] in logixable_names
+                    if still_in_func:
                         self.__last_validated_logixable_idx_offset -= 1
             
                     consume(iter_range, self.__last_validated_logixable_idx_offset)
@@ -96,8 +102,19 @@ class LogixableDefinition:
                 if not in_function:
                     if token not in allowed_args:
                         raise ValueError('Argument \'%s\' in definition is not defined in allowed arguments!' % token)
-                    print("PUSHING NORMAL OPERANT")
-                    tree_builder.push(StackNode(TreeNode(None, token)))
+
+                    total_node = TreeNode(None, token)
+
+                    # hacks for top-level recursion where parsed_inner_args is added but in_function is False
+                    if parsed_inner_args != 0 and parsed_inner_args != cur_inner_logixable_arg_count:
+                        self.__add_to_top_node_children(total_node, tree_builder)
+                        parsed_inner_args += 1
+                    else:
+                        parsed_inner_args = 0
+                        cur_inner_logixable = None
+                        cur_inner_logixable_arg_count = None
+                        tree_builder.push(StackNode(total_node))
+
                     continue
             
                 # ----- Handle invalid argument count for function ----
@@ -110,7 +127,6 @@ class LogixableDefinition:
 
                 if clean_token not in allowed_args:
                     raise ValueError('Argument \'%s\' in definition is not defined in allowed arguments!' % clean_token)
-                print("PUSHING FUNC OPERANT")
 
                 parsed_inner_args += 1
 
@@ -123,19 +139,28 @@ class LogixableDefinition:
 
         return top_node.value
 
-    # yeah this is the downside to using a LL here but it's needed
-    # this would've been in the stack class had it not required explicitly checking tree nodes
-    def __find_logixable_in_tree_builder(self, value: 'Logixable', tree_builer: Stack) -> StackNode:
-        if tree_builer.size == 0:
-            return None
+    def __calculate_top_func_children_len(self, children: list) -> int:
+        add = 0
+        for child in children:
+            if isinstance(child.value, TreeNode):
+                add += len(child.value.args)
+            else:
+                add += 1    
+        return add
 
-        temp = tree_builer.head
-        while temp != None:
-            if isinstance(temp.value, TreeNode) and temp.value.value == value:
-                return temp
-            temp = temp.prev
-        return None
+    def __add_to_top_node_children(self, total_node: TreeNode, tree_builder: Stack):
+        try:
+            tb_top_node = tree_builder.pop()
+        except:
+            tree_builder.push(StackNode(total_node))
+            return
 
+        tb_top = tb_top_node.value
+        if not isinstance(tb_top, TreeNode):
+            raise ValueError("Internal error! Add to top node children called at wrong time!")
+        tb_top.add_children([total_node])
+        tb_top_node.value = tb_top
+        tree_builder.push(tb_top_node)
 
     def solve(self, node: TreeNode):
         # go down the tree and stack-ify it?
