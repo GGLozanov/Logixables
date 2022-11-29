@@ -14,12 +14,13 @@ class LogixableDefinition:
         print(self.expr_tree)
 
     # this method makes me want to commit seppuku
+    # TODO: Handle func(a | b, b) etc.
     def __build_expression_tree(self, split_postfix: list, allowed_args: list, upper_logixable: 'Logixable' = None, tree_builder: Stack = Stack()) -> TreeNode:
         # "func3(a, b): func1(a, func2(a, b)) & a" or in postfix: func1 a, func2 a, b a &
         # example complex input:
             # func(func(a)) + func1(a+b, b*a)*a 
             # postfix: func func a func1 a b, b a * + a * +
-        # IF in_function AND space between args: operation inside func (not function call). IMPORTANT: Count pairs of no comma between and iterate until  find that many operators
+        # IF in_function AND space between args: operation inside func (not function call). IMPORTANT: Count pairs of no comma between and iterate until find that many operators
         logixable_names = [logixable.name for logixable in logixables]
         cur_inner_logixable: Logixable = None
         cur_inner_logixable_arg_count = None
@@ -28,9 +29,11 @@ class LogixableDefinition:
         parsed_inner_args = 0
         in_function = upper_logixable is not None
 
-        iter_range = iter(range(len(split_postfix)))
+        postfix_token_length = range(len(split_postfix))
+        iter_range = iter(postfix_token_length)
         for index in iter_range:
             token = split_postfix[index]
+            print("TKN: " + token)
             if not token:
                 raise ValueError("Empty token in postfix expression at %s index!" % index)
 
@@ -50,15 +53,29 @@ class LogixableDefinition:
                 # this should return a node that describes "func func a" or "func1 a b, b a * +" 
                 # recursion until exit node and then add this one BIG logixable node and its arg relations children (whether they be args or logixables) to the tree
                 parsed_inner_args += 1
+                print("ENTERING REC;")
                 func_node = self.__build_expression_tree(split_postfix[index+1:], cur_inner_logixable.args, cur_inner_logixable, tree_builder)
 
                 total_children = [func_node, *func_arg_children] if func_node.value is not list else func_node.value + func_arg_children
+
                 total_node = TreeNode(total_children, cur_inner_logixable)
                 if in_function:
                     self.__last_validated_logixable_idx_offset += len(upper_logixable.args)
                     return total_node
-                else:
-                    tree_builder.push(StackNode(total_node))
+                else: 
+                    # if node not exists w/ value cur_inner_logixable: add
+                    # otherwise append to children
+                    existing_node = self.__find_logixable_in_tree_builder(cur_inner_logixable, tree_builder)
+                    if existing_node is None:  
+                        tree_builder.push(StackNode(total_node))
+                    else:
+                        existing_node.value.add_children(total_children)
+
+                    # handle if a new function is next to call
+                    total_offset = self.__last_validated_logixable_idx_offset + index
+                    if total_offset in postfix_token_length and split_postfix[total_offset] in logixable_names:
+                        self.__last_validated_logixable_idx_offset -= 1
+            
                     consume(iter_range, self.__last_validated_logixable_idx_offset)
                     self.__last_validated_logixable_idx_offset = 0
             elif token in operators:
@@ -79,6 +96,7 @@ class LogixableDefinition:
                 if not in_function:
                     if token not in allowed_args:
                         raise ValueError('Argument \'%s\' in definition is not defined in allowed arguments!' % token)
+                    print("PUSHING NORMAL OPERANT")
                     tree_builder.push(StackNode(TreeNode(None, token)))
                     continue
             
@@ -92,6 +110,8 @@ class LogixableDefinition:
 
                 if clean_token not in allowed_args:
                     raise ValueError('Argument \'%s\' in definition is not defined in allowed arguments!' % clean_token)
+                print("PUSHING FUNC OPERANT")
+
                 parsed_inner_args += 1
 
                 func_arg_children.append(TreeNode(None, clean_token))
@@ -102,6 +122,20 @@ class LogixableDefinition:
             raise ValueError('Invalid input! Please, check your expression syntax! Expression tree builder stack is not empty!')
 
         return top_node.value
+
+    # yeah this is the downside to using a LL here but it's needed
+    # this would've been in the stack class had it not required explicitly checking tree nodes
+    def __find_logixable_in_tree_builder(self, value: 'Logixable', tree_builer: Stack) -> StackNode:
+        if tree_builer.size == 0:
+            return None
+
+        temp = tree_builer.head
+        while temp != None:
+            if isinstance(temp.value, TreeNode) and temp.value.value == value:
+                return temp
+            temp = temp.prev
+        return None
+
 
     def solve(self, node: TreeNode):
         # go down the tree and stack-ify it?

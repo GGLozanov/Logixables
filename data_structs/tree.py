@@ -3,6 +3,12 @@ class TreeNode:
         self.children = children
         self.value = value
 
+    def add_children(self, children: list['TreeNode']):
+        if self.children is not None:
+            self.children += children
+        else:
+            self.children = children
+
     def __str__(self) -> str:
         return "(Value %s -> %s)" % (self.value, self.children)
 

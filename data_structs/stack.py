@@ -37,7 +37,7 @@ class Stack:
         if self.size == 0 :
             return "Empty"
 
-        while temp.prev != None:
+        while temp != None:
             result += str(temp) 
             if temp.prev != None:
                 result += "<-"

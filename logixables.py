@@ -36,7 +36,9 @@ def execute_command(subcommands: list[str]):
         pass
     elif command_keyword == Command.HELP:
         print("1. DEFINE Syntax: \'DEFINE func_name(arguments): \"postfix expression\"\'. \nAllowed operators: \"&\", \'!\', \'|\'.")
-        print("Expression defined with DEFINE must have spaces between arguments in functions, operators, and operands! The function definition must also be wrapped in quotes!")
+        print("Expression defined with DEFINE must have spaces between arguments in functions, operators, and operands (commas between arguments as well if in a function call)! The function definition must also be wrapped in quotes!")
+        print("Example postfix syntax definition: 'DEFINE func1(a, b): \"func a, b b &\"' (translates to 'func(a, b) & b')")
+        print("In need of postfix reference, please use: https://scanftree.com/Data_Structure/prefix-postfix-infix-online-converter")
         # TODO: define other commands
     elif command_keyword == Command.EXIT:
         print('EXITING NOW!')
