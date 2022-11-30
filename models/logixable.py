@@ -195,13 +195,6 @@ class LogixableDefinition:
                 else:
                     left_operand = arg_values[allowed_args.index(left)]
 
-                # print("right val str: " + str(right.value))
-                # print("left val str: " + str(left.value))
-                # print("allowed args: " + str(allowed_args))
-                # print("arg vals: " + str(arg_values))
-                # print("left val: " + str(left_val))
-                # print("right val: " + str(right_val))
-
                 if node_val == Operator.AND:
                     return right_operand & left_operand
                 elif node_val == Operator.OR:
@@ -218,15 +211,13 @@ class LogixableDefinition:
         return node_val
 
     def __solve_inner_logixable(self, node_val: 'Logixable', allowed_args: list[str], arg_values: list[str]) -> bool:
-        print("ENTER REC")
         inner_logixable_allowed_args = node_val.args
         matching_logixable_args = filter(lambda e: e[0] in inner_logixable_allowed_args, allowed_args)
         matching_logixable_args_idxs = [allowed_args.index(matching_logixable_arg) for matching_logixable_arg in matching_logixable_args]
         matching_logixable_arg_values = [arg_values[matching_logixable_args_idx] for matching_logixable_args_idx in matching_logixable_args_idxs]
-        # print("MATCHING ARGS: " + str(matching_logixable_args))
-        # print("MATCHING VALS: " + str(matching_logixable_arg_values))
 
-        memoized_solution = self.__logixable_solution_in_memoized_solutions(node_val, arg_values)
+        # BAD REPEAT HERE FIXME
+        memoized_solution = logixable_solution_in_memoized_solutions(node_val, arg_values)
         if memoized_solution is not None:
             return memoized_solution
 
@@ -234,17 +225,6 @@ class LogixableDefinition:
         solution = node_val.definition.solve(allowed_args, matching_logixable_arg_values)
         memoized_solutions.append((node_val, arg_values, solution))
         return solution
-
-    def __logixable_solution_in_memoized_solutions(self, logixable: 'Logixable', arg_values: list[str]) -> bool | None:
-        memoized_matching = list(filter(lambda m_s: m_s[0] is logixable and m_s[1] == arg_values, memoized_solutions))
-        if len(memoized_matching) != 1:
-            return None
-    
-        memoized_solution = memoized_matching[0]
-        if len(memoized_solution) != 3:
-            raise ValueError("Internal error! Memoized solution storage access failure!")
-
-        return memoized_solution[2] # bool value stored as 
 
 class Logixable:
     def __init__(self, name: str, args: list, definition: LogixableDefinition = None) -> None:
@@ -256,8 +236,14 @@ class Logixable:
     def solve(self, arg_values: list[bool]) -> bool:
         if len(arg_values) != len(self.args):
             raise ValueError("Argument value count must be the same as arguments of function!")
+
+        memoized_solution = logixable_solution_in_memoized_solutions(self, arg_values)
+        if memoized_solution is not None:
+            return memoized_solution
     
-        return self.definition.solve(self.args, arg_values)
+        solution = self.definition.solve(self.args, arg_values)
+        memoized_solutions.append((self, arg_values, solution))
+        return solution
 
     def define(self, split_postfix: str):
         self.definition = LogixableDefinition(split_postfix, self.args)
@@ -273,5 +259,20 @@ class Logixable:
 
 # global list of defined logixables for the program at any point; TODO: Save somewhere else
 logixables: list[Logixable] = []
+
+# FIXME: This should be moved (muahaha, all the spaghetti!)
 # memoized solutions to use when solving already calculated funcs. Contains logixable reference (key), list of values for args (1-to-1 relationship), and answer to operation
 memoized_solutions: list[(Logixable, list[int], bool)] = []
+
+def logixable_solution_in_memoized_solutions(logixable: Logixable, arg_values: list[str]) -> bool | None:
+    try:
+        memoized_matching = next(m_s for m_s in memoized_solutions if m_s[0] is logixable and m_s[1] == arg_values)
+        if memoized_matching is None:
+            return None
+
+        if len(memoized_matching) != 3:
+            raise ValueError("Internal error! Memoized solution storage access failure!")
+
+        return memoized_matching[2] # bool value stored as solution
+    except StopIteration:
+        return None
