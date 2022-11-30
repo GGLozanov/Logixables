@@ -37,7 +37,6 @@ class Parser:
         arg_end = 0
         func_args = []
         func_name = ''
-        print(func)
         for index, char in enumerate(func):
             if char == Operator.LEFT_PARENTHESIS:
                 func_name = func[0:index]

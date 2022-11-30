@@ -2,6 +2,8 @@ from data_structs.stack import StackNode, Stack
 from data_structs.tree import TreeNode, Tree
 from models.operators import Operator
 from utils.consume import consume
+from utils.binary_permutations import binary_permutations
+from utils.str_join import str_join
 
 class LogixableDefinition:
     def __init__(self, split_postfix: list, allowed_args: list):
@@ -247,6 +249,16 @@ class Logixable:
 
     def define(self, split_postfix: str):
         self.definition = LogixableDefinition(split_postfix, self.args)
+
+    def generate_truth_table(self) -> str:
+        truth_table: list[str] = []
+        perms = binary_permutations(len(self.args))
+
+        truth_table.append(str_join(self.args, " | ") + " Result")
+        for perm in perms:
+            solution = self.solve(perm)
+            truth_table.append(str_join(list(map(int, perm)), " | ") + ("%s" % int(solution)))
+        return str_join(truth_table, "\n")
 
     def visualize(self):
         pass

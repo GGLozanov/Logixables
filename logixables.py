@@ -37,15 +37,14 @@ def execute_command(original_command: str, subcommands: list[str]):
         signature = parser.extract_function_declaration_signature(original_command, False)
         func_call = parser.parse_function_signature_solve(signature)
 
-        logixable = next(l for l in logixables if func_call.name == l.name)
-        if next is None:
-            raise ValueError("No Logixable found with the name provided in the command! Please, check the name and try again!")
+        logixable = find_logixable_with_fail(func_call.name)
 
         arg_values = func_call.args # this actually contains values
         result = logixable.solve(arg_values)
         print("RESULT: " + str(result))
     elif command_keyword == Command.ALL:
-        pass
+        logixable = find_logixable_with_fail(subcommands[1])
+        print(logixable.generate_truth_table())
     elif command_keyword == Command.FIND:
         pass
     elif command_keyword == Command.VISUALIZE:
@@ -59,6 +58,14 @@ def execute_command(original_command: str, subcommands: list[str]):
     elif command_keyword == Command.EXIT:
         print('EXITING NOW!')
         exit(0)
+
+def find_logixable_with_fail(name: str):
+    try:
+        logixable = next(l for l in logixables if name == l.name)
+    except:
+        raise ValueError("No Logixable found with the name provided in the command! Please, check the name and try again!")
+
+    return logixable
 
 def main():
     print("Welcome to Logixables! Please, enter a valid command to get started!\n")
