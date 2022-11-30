@@ -37,6 +37,7 @@ class Parser:
         arg_end = 0
         func_args = []
         func_name = ''
+        print(func)
         for index, char in enumerate(func):
             if char == Operator.LEFT_PARENTHESIS:
                 func_name = func[0:index]
@@ -58,17 +59,34 @@ class Parser:
 
         return Logixable(func_name, func_args)
 
+    def parse_function_signature_solve(self, func: str) -> Logixable:
+        func_call = self.parse_function_signature(func)
+        func_args = func_call.args
+        bool_func_args: list[bool] = []
+        for arg in func_args:
+            if arg != "1" and arg != "0":
+                raise ValueError("Invalid function call input! Function arguments should be either 1 or 0!")
+            bool_func_args.append(bool(int(arg)))
+
+        func_call.args = bool_func_args
+        return func_call
+
     # these 2 funcs below are for parsing the DEFINE command
-    def extract_function_declaration_signature(self, command: str) -> str:
+    def extract_function_declaration_signature(self, command: str, check_delims: bool = True) -> str:
         func_command = self.__slice_after_delim_occurrences(command, ' ') # get after first command and start analysing function
         closing_brace_found = False
         for index, char in enumerate(func_command):
-            if closing_brace_found and (char == ':' or char == ' '):
-                # accept both space and colon
-                return func_command[:index] 
+            if closing_brace_found:
+                if check_delims and char == ':' or char == ' ':
+                    # accept both space and colon
+                    return func_command[:index]
+                else:
+                    return func_command[:index]
 
             if char == Operator.RIGHT_PARENTHESIS:
                 closing_brace_found = True
+                if index == len(func_command) - 1:
+                    return func_command # parenthesis at end
         raise ValueError("Could not parse function from command correctly! Please, ensure the function is closed with a right parenthesis and has a colon/whitespace after its declaration along with a definition!")
 
     # pass command after signature (there may be other chars but just find quote)
@@ -99,7 +117,7 @@ class Parser:
         if func_sig[-1] != Operator.RIGHT_PARENTHESIS:
             raise ValueError("Function signature within function definition requires closing parethesis!")
 
-    def parse_function_definition(self, definition: str, allowed_args: list) -> LogixableDefinition:
+    def clean_function_definition(self, definition: str) -> str:
         # handle split by ' ' and no space POSTFIX (later infix)
         # no handling of if no space between ":" and definition -> prolly not
         # detect unallowed args used (easy with ' ' but if spliced together, check if contains? Harder to implement) -> assume spaces as of now
@@ -118,7 +136,7 @@ class Parser:
         # assume tokens split by space as for now and that they are postfix
         postfix = self.__split(definition, ' ')
 
-        return LogixableDefinition(postfix, allowed_args)
+        return postfix
     
     def __validate_function_def_syntax(self, func_def: str):
         if not func_def:

@@ -4,8 +4,6 @@ from models.operators import Operator
 from utils.consume import consume
 
 class LogixableDefinition:
-    # logixable_arg_relation = [(Logixable1, ['a', 'b']), (Logixable1, ['b', 'c'])] -> arg pattern matchup (from allowed args for current logixable) for inner logixables. Lookup consists of search **BY LOGIXABLE REFERENCE** (a.k.a. use "is")
-
     def __init__(self, split_postfix: list, allowed_args: list):
         self.split_postfix_input = split_postfix
         self.__last_validated_logixable_idx_offset = 0
@@ -16,6 +14,7 @@ class LogixableDefinition:
     # this method makes me want to commit seppuku
     # TODO: Handle func(a | b, b) etc. by treating operands as functions and going in recursion for them too (this would be hard because of current postfix notation schema)
     # TODO: Maybe initiate search for operator when find "a b," pair of func args and then attach to first operator (non-recursive)
+    # TODO: Handle no-arg methods/funcs
     def __build_expression_tree(self, split_postfix: list, allowed_args: list, upper_logixable: 'Logixable' = None, tree_builder: Stack = Stack()) -> TreeNode:
         logixable_names = [logixable.name for logixable in logixables]
 
@@ -162,23 +161,90 @@ class LogixableDefinition:
         tb_top_node.value = tb_top
         tree_builder.push(tb_top_node)
 
-    def solve(self, node: TreeNode):
-        # go down the tree and stack-ify it?
-        # if going back in reverse: 
-        #   if top-level parent is LOGIXABLE and has no logixables inside it: iterate between all children nodes, assign arguments from valid_args, and perform operations
-        #   if child is argument: check argument value by indexing it with args and arg_values
-        #   if child is operator: perform operation with last two children with operator
-        #   if child is LOGIXABLE: call `.solve()` and coalesce the results together.
-        #       then lookup logixable w/ is and place args accordingly
-        #       if arg in lookup is LOGIXABLE AGAIN: recursion to `.solve()` to loop and further check argument relation
-        #       if VALUES correspond to LOGIXABLE args from memoized_solutions array: USE MEMOIZED SOLUTION!
-        #   continue until reach stack empty/bottom of tree?
+    def solve(self, allowed_args: list[str], arg_values: list[str]) -> bool:
+        return self.__solve(self.expr_tree.root, allowed_args, arg_values)
 
-        # if node.value is LogixableDefinition:
+    def __solve(self, node: TreeNode, allowed_args: list[str], arg_values: list[bool]) -> bool:
+        node_val = node.value
+        node_children = node.children
 
-        # TODO: Add any solved logixables to memoized_solutions array
+        if node_children is None or len(node_children) == 0:
+            return node_val # data node
 
-        pass
+        operators = [o.value for o in Operator]
+
+        if isinstance(node_val, Logixable):
+            return self.__solve_inner_logixable(node_val, allowed_args, arg_values)
+        elif node_val in operators:
+            if node_val != Operator.NOT:
+                if len(node_children) != 2:
+                    raise ValueError("Internal error! Binary operator cannot have more or fewer than two children")
+                right = node_children[0].value
+                left = node_children[1].value
+
+                right_operand = None
+                left_operand = None
+                if isinstance(right, Logixable):
+                    right_operand = self.__solve_inner_logixable(right, allowed_args, arg_values)
+                else:
+                     # this is a data node from here (e.g. arguments)
+                    right_operand = arg_values[allowed_args.index(right)]
+             
+                if isinstance(left, Logixable):
+                    left_operand = self.__solve_inner_logixable(left, allowed_args, arg_values)
+                else:
+                    left_operand = arg_values[allowed_args.index(left)]
+
+                # print("right val str: " + str(right.value))
+                # print("left val str: " + str(left.value))
+                # print("allowed args: " + str(allowed_args))
+                # print("arg vals: " + str(arg_values))
+                # print("left val: " + str(left_val))
+                # print("right val: " + str(right_val))
+
+                if node_val == Operator.AND:
+                    return right_operand & left_operand
+                elif node_val == Operator.OR:
+                    return right_operand | left_operand
+            else:
+                if len(node_children) != 1:
+                    raise ValueError("Internal error! Unary operator cannot have more or less than one child!")
+                operand = node_children[0].value
+                
+                if isinstance(operand, Logixable):
+                    operand = self.__solve_inner_logixable(operand, allowed_args, arg_values)
+                return not operand
+                
+        return node_val
+
+    def __solve_inner_logixable(self, node_val: 'Logixable', allowed_args: list[str], arg_values: list[str]) -> bool:
+        print("ENTER REC")
+        inner_logixable_allowed_args = node_val.args
+        matching_logixable_args = filter(lambda e: e[0] in inner_logixable_allowed_args, allowed_args)
+        matching_logixable_args_idxs = [allowed_args.index(matching_logixable_arg) for matching_logixable_arg in matching_logixable_args]
+        matching_logixable_arg_values = [arg_values[matching_logixable_args_idx] for matching_logixable_args_idx in matching_logixable_args_idxs]
+        # print("MATCHING ARGS: " + str(matching_logixable_args))
+        # print("MATCHING VALS: " + str(matching_logixable_arg_values))
+
+        memoized_solution = self.__logixable_solution_in_memoized_solutions(node_val, arg_values)
+        if memoized_solution is not None:
+            return memoized_solution
+
+        # access definition directly to override allowed args
+        solution = node_val.definition.solve(allowed_args, matching_logixable_arg_values)
+        memoized_solutions.append((node_val, arg_values, solution))
+        return solution
+
+    def __logixable_solution_in_memoized_solutions(self, logixable: 'Logixable', arg_values: list[str]) -> bool | None:
+        memoized_matching = list(filter(lambda m_s: m_s[0] is logixable and m_s[1] == arg_values, memoized_solutions))
+        if len(memoized_matching) != 1:
+            return None
+    
+        memoized_solution = memoized_matching[0]
+        if len(memoized_solution) != 3:
+            raise ValueError("Internal error! Memoized solution storage access failure!")
+
+        return memoized_solution[2] # bool value stored as 
 
 class Logixable:
     def __init__(self, name: str, args: list, definition: LogixableDefinition = None) -> None:
@@ -187,11 +253,14 @@ class Logixable:
         self.definition = definition
         pass
 
-    def solve(self, arg_values: list):
+    def solve(self, arg_values: list[bool]) -> bool:
         if len(arg_values) != len(self.args):
             raise ValueError("Argument value count must be the same as arguments of function!")
+    
+        return self.definition.solve(self.args, arg_values)
 
-        self.definition.solve()
+    def define(self, split_postfix: str):
+        self.definition = LogixableDefinition(split_postfix, self.args)
 
     def visualize(self):
         pass
