@@ -6,11 +6,10 @@ from utils.binary_permutations import binary_permutations
 from utils.str_join import str_join
 
 class LogixableDefinition:
-    def __init__(self, split_postfix: list, allowed_args: list):
+    def __init__(self, split_postfix: list, allowed_args: list, expr_tree: Tree | None = None):
         self.split_postfix_input = split_postfix
         self.__last_validated_logixable_idx_offset = 0
-        self.__tree_builder = Stack()
-        self.expr_tree = Tree(self.__build_expression_tree(split_postfix, allowed_args, tree_builder=self.__tree_builder))
+        self.expr_tree = expr_tree if expr_tree is not None else Tree(self.__build_expression_tree(split_postfix, allowed_args))
         print(self.expr_tree)
 
     # this method makes me want to commit seppuku

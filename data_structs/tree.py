@@ -1,7 +1,7 @@
 class TreeNode:
     def __init__(self, children: list['TreeNode'] | None, value: any):
-        self.children = children
         self.value = value
+        self.children = children
 
     def add_children(self, children: list['TreeNode']):
         if self.children is not None:

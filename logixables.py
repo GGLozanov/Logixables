@@ -1,7 +1,9 @@
 import parser as p
 from models.commands import Command
-from models.logixable import logixables
+import models.logixable as logix_blueprint
+from utils.find_logix_w_fail import find_logixable_with_fail
 import file_handler as fh
+import atexit
 
 parser = p.Parser()
 file_handler = fh.FileHandler()
@@ -19,7 +21,7 @@ def execute_command(original_command: str, subcommands: list[str]):
 
         logixable_signature = parser.extract_function_declaration_signature(original_command)
         logixable = parser.parse_function_signature(logixable_signature)
-        logixable_names = [l.name for l in logixables]
+        logixable_names = [l.name for l in logix_blueprint.logixables]
 
         if logixable.name in logixable_names:
             raise ValueError("Cannot define a logixable with the same name!") # TODO: Support method overloading lol
@@ -29,7 +31,7 @@ def execute_command(original_command: str, subcommands: list[str]):
         logixable_definition_postfix_clean = parser.clean_function_definition(logixable_definition_postfix)
         
         logixable.define(logixable_definition_postfix_clean)
-        logixables.append(logixable)
+        logix_blueprint.logixables.append(logixable)
         print("Successfully added function with name '%s' to the logixables!" % logixable.name)
     elif command_keyword == Command.SOLVE:
         # this should return a tuple of (func name, func args) but just use logixable as a box/wrapper type
@@ -37,13 +39,13 @@ def execute_command(original_command: str, subcommands: list[str]):
         signature = parser.extract_function_declaration_signature(original_command, False)
         func_call = parser.parse_function_signature_solve(signature)
 
-        logixable = find_logixable_with_fail(func_call.name)
+        logixable = find_logixable_with_fail(func_call.name, logix_blueprint.logixables)
 
         arg_values = func_call.args # this actually contains values
         result = logixable.solve(arg_values)
         print("RESULT: " + str(result))
     elif command_keyword == Command.ALL:
-        logixable = find_logixable_with_fail(subcommands[1])
+        logixable = find_logixable_with_fail(subcommands[1], logix_blueprint.logixables)
         print(logixable.generate_truth_table())
     elif command_keyword == Command.FIND:
         pass
@@ -59,28 +61,29 @@ def execute_command(original_command: str, subcommands: list[str]):
         print('EXITING NOW!')
         exit(0)
 
-def find_logixable_with_fail(name: str):
-    try:
-        logixable = next(l for l in logixables if name == l.name)
-    except:
-        raise ValueError("No Logixable found with the name provided in the command! Please, check the name and try again!")
-
-    return logixable
+def exit_handler():
+    file_handler.save_logixables(logix_blueprint.logixables)
 
 def main():
     print("Welcome to Logixables! Please, enter a valid command to get started!\n")
     print("Valid commands are: DEFINE, SOLVE, FIND, ALL, VISUALIZE, HELP, EXIT")
-    
-    inp = input()
-    while True:
-        try:
-            subcommands = parser.parse_command(inp)
-            print("-----------------")
-            execute_command(inp, subcommands)
-            print("-----------------")       
-        except ValueError as err:
-            print("%s" % err)
+
+    atexit.register(exit_handler)
+    logix_blueprint.logixables = file_handler.read_logixables()
+
+    try:
         inp = input()
+        while True:
+            try:
+                subcommands = parser.parse_command(inp)
+                print("-----------------")
+                execute_command(inp, subcommands)
+                print("-----------------")       
+            except ValueError as err:
+                print("%s" % err)
+            inp = input()
+    except KeyboardInterrupt:
+        return
 
 if __name__ == "__main__":
     main()
