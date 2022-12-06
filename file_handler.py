@@ -14,7 +14,6 @@ class FileHandler:
 
     def read_logixables(self) -> list[logix_blueprint.Logixable]:
         try:
-            import json
             file = open("%s.txt" % self.file_name, "r+")
             file_data = file.read()
             file.close()
