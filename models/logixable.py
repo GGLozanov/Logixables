@@ -180,21 +180,28 @@ class LogixableDefinition:
             if node_val != Operator.NOT:
                 if len(node_children) != 2:
                     raise ValueError("Internal error! Binary operator cannot have more or fewer than two children")
-                right = node_children[0].value
-                left = node_children[1].value
+                right = node_children[0]
+                left = node_children[1]
+
+                right_val = right.value
+                left_val = left.value
 
                 right_operand = None
                 left_operand = None
-                if isinstance(right, Logixable):
-                    right_operand = self.__solve_inner_logixable(right, allowed_args, arg_values)
+                if isinstance(right_val, Logixable):
+                    right_operand = self.__solve_inner_logixable(right_val, allowed_args, arg_values)
+                elif right_val in operators:
+                    right_operand = self.__solve(right, allowed_args, arg_values)
                 else:
                      # this is a data node from here (e.g. arguments)
-                    right_operand = arg_values[allowed_args.index(right)]
-             
-                if isinstance(left, Logixable):
-                    left_operand = self.__solve_inner_logixable(left, allowed_args, arg_values)
+                    right_operand = arg_values[allowed_args.index(right_val)]
+
+                if isinstance(left_val, Logixable):
+                    left_operand = self.__solve_inner_logixable(left_val, allowed_args, arg_values)
+                elif left_val in operators:
+                    left_operand = self.__solve(left, allowed_args, arg_values)
                 else:
-                    left_operand = arg_values[allowed_args.index(left)]
+                    left_operand = arg_values[allowed_args.index(left_val)]
 
                 if node_val == Operator.AND:
                     return right_operand & left_operand
@@ -203,7 +210,7 @@ class LogixableDefinition:
             else:
                 if len(node_children) != 1:
                     raise ValueError("Internal error! Unary operator cannot have more or less than one child!")
-                operand = node_children[0].value
+                operand = arg_values[allowed_args.index(node_children[0].value)]
                 
                 if isinstance(operand, Logixable):
                     operand = self.__solve_inner_logixable(operand, allowed_args, arg_values)

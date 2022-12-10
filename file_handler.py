@@ -25,7 +25,7 @@ class FileHandler:
                     definition_tree = definition["expr_tree"]["root"]
                 except:
                     definition_tree = definition["expr_tree"]
-                tree = self.__read_logixable_tree(definition_tree["children"], definition_tree["value"], logixables)
+                tree = data_structs.tree.Tree(self.__read_logixable_tree(definition_tree["children"], definition_tree["value"], logixables))
 
                 logixable = logix_blueprint.Logixable(
                     json_element["name"], 
@@ -36,7 +36,10 @@ class FileHandler:
         except FileNotFoundError:
             return []
 
-    def __read_logixable_tree(self, children: list[dict], value: any, cur_logixables: list[logix_blueprint.Logixable]) -> data_structs.tree.Tree:
+    def __read_logixable_tree(self, children: list[dict], value: any, cur_logixables: list[logix_blueprint.Logixable]) -> data_structs.tree.TreeNode:
+        if children is None:
+            return data_structs.tree.TreeNode(None, value)
+
         parsed_children = []
         for child in children:
             child_val = child["value"]
@@ -46,7 +49,13 @@ class FileHandler:
                 node_val = utils.find_logix_w_fail.find_logixable_with_fail(child_val["name"], cur_logixables)
             else:
                 node_val = child_val
-            parsed_children.append(data_structs.tree.TreeNode(child["children"], node_val))
-        root = data_structs.tree.TreeNode(parsed_children, value)
-        return data_structs.tree.Tree(root)
+            if "children" in child and child["children"] is not None:
+                inner_parsed_children = []
+                for inner_child in child["children"]:
+                    inner_parsed_children.append(self.__read_logixable_tree(inner_child["children"], inner_child["value"], cur_logixables))
+                parsed_children.append(data_structs.tree.TreeNode(inner_parsed_children, node_val))
+            else:
+                parsed_children.append(data_structs.tree.TreeNode(None, node_val))
+        upper_node = data_structs.tree.TreeNode(parsed_children, value)
+        return upper_node
         
