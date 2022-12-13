@@ -1,15 +1,15 @@
 import models.logixable as logix_blueprint
 from data_structs.tree import TreeNode, Tree
 from models.operators import Operator
-from utils.permutations import permutations
+from utils.generic_combinatorics import permutations, combinations
 import string
 import copy
 
+# TODO: Support trees with funcs inside funcs and operators inside func args
+# TODO: Filter out trees like "a & b & c" when tree "b & a & c" is found as a solution
+# TODO: Support trees with increasingly larger height (DP)
 class LogixableFinder:
     
-    def __init__(self):
-        self.__max_allowed_tree_height = 4 
-
     # 3 sets: operator set, function set, argument set
     # function set and operator set get truncated depending on current_tree_height and allowed_arg length of each logixable in cur_logixables
     # then combinations from that are produced
@@ -17,45 +17,47 @@ class LogixableFinder:
     # The tree is solved and checked if it can be satisifed now
     # all trees which satisfy the condition are returned, all which do not => recursion
     # __exhausted_possible_combinations_for_iter reached once certain limit is reached --> the cutoff for all tree generations. If certain logixable depth is reached, abandon solution and raise exception?
-    # TODO: Exclude combinations with operators that don't make sense/reduplicate logic (like putting "!" when the upper node is "!")
-    # TODO: Support trees with funcs inside funcs and operators inside func args
-    # TODO: Filter out trees like "a & b & c" when tree "b & a & c" is found as a solution
-    # TODO: Support trees with increasingly larger height (DP)
+    # Uses SOP
     def __find_logixable_tree_from_truth_table_internal(self, truth_table: list[list[bool]], 
-            cur_logixables: list[logix_blueprint.Logixable], logixable_definitions: list[logix_blueprint.LogixableDefinition],
-            cur_tree: Tree = None,
-            upper_node_parent: TreeNode = None,
-            upper_node: TreeNode = None, current_tree_height: int = 0):
+            cur_logixables: list[logix_blueprint.Logixable],
+            upper_node: TreeNode = None, current_tree_height: int = 0) -> list[logix_blueprint.LogixableDefinition]:
         at_top = upper_node is None or current_tree_height == 0
         
         max_args = len(truth_table[0])
         allowed_logixables = self.__generate_allowed_logixables(cur_logixables, max_args)
         allowed_args = string.ascii_lowercase[:max_args]
-        allowed_operands = [*allowed_logixables, allowed_args] # plug in args as well in the allowed operands
         operators = list(Operator)
 
-        if at_top:
+        logixable_definitions: list[logix_blueprint.LogixableDefinition] = []
+        candidate_solutions: list[list[Tree]] = [] # joined by OR or operator at the end
+        sop_trees: list[Tree] = []
+        sop_truth_table_rows = list(filter(lambda r: r[len(truth_table) - 1] == 1, truth_table))
+        for sop_row in sop_truth_table_rows:
+            sop_trees.append(self.__generate_SOP_tree(sop_row))
+        candidate_solutions.append(sop_trees)
+
+        tree_combinations = list(filter(lambda c: len(c) == 0, combinations(sop_trees)))
+        for combination in tree_combinations:
+            pass
+
+        # if at_top:
             # generate pairs of operands applicable
-            operand_pairs = [(left_operand, right_operand) for idx, left_operand in enumerate(allowed_operands) for right_operand in allowed_operands[idx + 1:]]
-            top_trees: list[logix_blueprint.Tree] = []
-            for operands in operand_pairs:
-                left = operands[0]
-                right = operands[1]
-                for operator in operators:
-                    top_trees.append(Tree(TreeNode([TreeNode(None, left), TreeNode(None, right)], str(operator))))
+            # operand_pairs = [(left_operand, right_operand) for idx, left_operand in enumerate(allowed_operands) for right_operand in allowed_operands[idx + 1:]]
+            # top_trees: list[logix_blueprint.Tree] = []
+            # for operands in operand_pairs:
+            #     left = operands[0]
+            #     right = operands[1]
+            #     for operator in operators:
+            #         top_trees.append(Tree(TreeNode([TreeNode(None, left), TreeNode(None, right)], str(operator))))
 
-            # contains arg permutations for logixables
-            top_logixable_candidates: list[logix_blueprint.LogixableDefinition] = [*list(map(lambda l: l.definition, allowed_logixables)), *list(map(lambda tt: logix_blueprint.LogixableDefinition(expr_tree=tt), top_trees))]
+            # # contains arg permutations for logixables
+            # top_logixable_candidates: list[logix_blueprint.LogixableDefinition] = [*list(map(lambda l: l.definition, allowed_logixables)), *list(map(lambda tt: logix_blueprint.LogixableDefinition(expr_tree=tt), top_trees))]
 
-            # SOLVE
-            # TODO: Handle logixables where you can't put the entire row in -> we can insert the entire row as long as all combinations are made because they just won't be indexed
-            for candidate in top_logixable_candidates:
-                tree = candidate.expr_tree
-                
-
-    
-
-            valid_tree_ = list(filter(lambda lc: lc.definition.root.children is not None, top_logixable_candidates)) # omit top-level logixables FOR NOW TODO: Support func calls inside func calls
+            # # SOLVE
+            # # TODO: Handle logixables where you can't put the entire row in -> we can insert the entire row as long as all combinations are made because they just won't be indexed
+            # for candidate in top_logixable_candidates:
+            #     tree = candidate.expr_tree
+            # valid_tree_ = list(filter(lambda lc: lc.definition.root.children is not None, top_logixable_candidates)) # omit top-level logixables FOR NOW TODO: Support func calls inside func calls
 
             # generate permutations
 
@@ -63,9 +65,7 @@ class LogixableFinder:
             # logixable_definition_candidates = map( ) -> map to logixabledefinition-s
             # for logixable_def in logixable_definition_candidates:
             #   self.__find_logixable_tree_from_truth_table_internal 
-
-            pass
-        elif current_tree_height < self.__max_allowed_tree_height:
+        # elif current_tree_height < self.__max_allowed_tree_height:
             # if upper node is logixable:
             #   check using logixable inside logixable
 
@@ -87,9 +87,11 @@ class LogixableFinder:
             #    pass
 
             # return None # reached top
-            pass
-        else:
-            raise RecursionError()
+        for candidate_solution in candidate_solutions:
+            candidate_tree = self.__generate_merger_tree(candidate_solution, Operator.OR)
+            logixable_definitions.append(logix_blueprint.LogixableDefinition(expr_tree=candidate_tree))
+
+        return logixable_definitions
 
     # gives allowed logixables with all permutations of args so that they work with truth table
     def __generate_allowed_logixables(self, cur_logixables: list[logix_blueprint.Logixable], max_args: int):
@@ -100,24 +102,43 @@ class LogixableFinder:
                 new_logix.args = arg_perm
                 allowed_logixables.append(new_logix)
         return allowed_logixables
-    
-    def __find_logixable_from_truth_table_internal_depth_handle(self, truth_table: list[list[bool]], 
-            cur_logixables: list[logix_blueprint.Logixable], logixable_definitions: list[logix_blueprint.LogixableDefinition], 
-            cur_tree: Tree = None,
-            upper_node: TreeNode = None, upper_node_parent: TreeNode = None,
-            current_tree_height: int = 0):
-            at_top = upper_node is None or current_tree_height == 0
-            try:
-                return self.__find_logixable_tree_from_truth_table_internal(truth_table, cur_logixables, logixable_definitions, upper_node, upper_node_parent, cur_tree, current_tree_height + 1)
-            except RecursionError:
-                if at_top:
-                    # terminate execution for this tree specifically (don't add?)
-                    # will this work??
-                    return
-                else:
-                    raise RecursionError() # delegate to top
-                
 
+    def __generate_SOP_tree(self, sop_row: list[bool]) -> Tree:
+        sop_row_args = sop_row[:-1]
+        sop_nodes: list[TreeNode] = []
+        for arg in sop_row_args:
+            if arg == True:
+                sop_nodes.append(TreeNode(None, arg))
+            else:
+                sop_nodes.append(TreeNode([arg], str(Operator.NOT)))
+        return self.__generate_merger_tree(sop_nodes, Operator.AND)
+
+    def __generate_merger_tree(self, trees: list[Tree], join_operator: Operator) -> Tree:
+        nodes = list(map(lambda t: t.root, trees))
+        return self.__generate_merger_tree(nodes, join_operator)
+
+    def __generate_merger_tree(self, nodes: list[TreeNode], join_operator: Operator) -> Tree:
+        if len(nodes) < 2 and join_operator != Operator.NOT:
+            raise ValueError("Invalid nodes to construct operator tree")
+        nodes_r = nodes[::-1]
+
+        while len(nodes_r) != 0:
+            if join_operator == Operator.NOT:
+                node = nodes_r.pop()
+                nodes_r.append(TreeNode([node], str(join_operator)))
+            else:
+                node_r = nodes_r.pop()
+                node_l = nodes_r.pop()
+
+                nodes_r.append(TreeNode([node_r, node_l], str(join_operator)))
+
+        try:
+            root = nodes_r.pop()
+        except:
+            raise ValueError("Internal error! Unbalanced amount of nodes for merger tree!")
+
+        return Tree(root)
+        
     def find_logixable_from_truth_table(self, truth_table: list[list[bool]], cur_logixables: list[logix_blueprint.LogixableDefinition]) -> list[logix_blueprint.Logixable]:
         if len(truth_table) != 0 and len(truth_table) != len(truth_table[0]):
             raise ValueError("Truth table must be a matrix!")
