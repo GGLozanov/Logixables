@@ -4,6 +4,7 @@ from models.operators import Operator
 from utils.consume import consume
 from utils.binary_permutations import binary_permutations
 from utils.str_join import str_join
+from utils.indexof import index_of
 
 class LogixableDefinition:
     def __init__(self, split_postfix: list = [], allowed_args: list = [], expr_tree: Tree | None = None):
@@ -132,9 +133,10 @@ class LogixableDefinition:
 
                 func_arg_children.append(TreeNode(None, clean_token))
         self.__last_validated_logixable_idx_offset = 0
-        top_node = tree_builder.pop()
 
-        if not tree_builder.is_empty():
+        try:
+            top_node = tree_builder.pop()
+        except:
             raise ValueError('Invalid input! Please, check your expression syntax! Expression tree builder stack is not empty!')
 
         return top_node.value
@@ -194,14 +196,14 @@ class LogixableDefinition:
                     right_operand = self.__solve(right, allowed_args, arg_values)
                 else:
                      # this is a data node from here (e.g. arguments)
-                    right_operand = arg_values[allowed_args.index(right_val)]
+                    right_operand = arg_values[index_of(allowed_args, right_val)]
 
                 if isinstance(left_val, Logixable):
                     left_operand = self.__solve_inner_logixable(left_val, allowed_args, arg_values)
                 elif left_val in operators:
                     left_operand = self.__solve(left, allowed_args, arg_values)
                 else:
-                    left_operand = arg_values[allowed_args.index(left_val)]
+                    left_operand = arg_values[index_of(allowed_args, left_val)]
 
                 if node_val == Operator.AND:
                     return right_operand & left_operand
@@ -210,7 +212,7 @@ class LogixableDefinition:
             else:
                 if len(node_children) != 1:
                     raise ValueError("Internal error! Unary operator cannot have more or less than one child!")
-                operand = arg_values[allowed_args.index(node_children[0].value)]
+                operand = arg_values[index_of(allowed_args, node_children[0].value)]
                 
                 if isinstance(operand, Logixable):
                     operand = self.__solve_inner_logixable(operand, allowed_args, arg_values)
@@ -221,7 +223,7 @@ class LogixableDefinition:
     def __solve_inner_logixable(self, node_val: 'Logixable', allowed_args: list[str], arg_values: list[str]) -> bool:
         inner_logixable_allowed_args = node_val.args
         matching_logixable_args = filter(lambda e: e[0] in inner_logixable_allowed_args, allowed_args)
-        matching_logixable_args_idxs = [allowed_args.index(matching_logixable_arg) for matching_logixable_arg in matching_logixable_args]
+        matching_logixable_args_idxs = [index_of(allowed_args, matching_logixable_arg) for matching_logixable_arg in matching_logixable_args]
         matching_logixable_arg_values = [arg_values[matching_logixable_args_idx] for matching_logixable_args_idx in matching_logixable_args_idxs]
 
         # BAD REPEAT HERE FIXME

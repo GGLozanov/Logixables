@@ -51,7 +51,8 @@ class Parser:
 
             if arg_start != 0 and arg_end != 0:
                 args = func[arg_start:arg_end]
-                # THIS SHOULD USE AN ACTUAL .SPLIT() BECAUSE NO WAY AM I IMPLEMENTING KNUTH-MORRIS-PRAT TO OPTIMISE THIS TO SEARCH WITHIN SUBSTRINGS BECAUSE OF REQUIREMENTs
+                # this should use an actual, more sophisticated .split()
+                # because substring optimisation requires something a la Knuth-Morris-Pratt algorithm
                 func_args = [a.strip() for a in self.__split(args, ',')] # everything after func name
                 if not func_args:
                     func_args = [a.strip() for a in self.__split(args, ', ')] # try w/ space if it doesn't work
@@ -144,8 +145,14 @@ class Parser:
         if not self.__balanced_parentheses(func_def):
             raise ValueError("Function definition has an unbalanced number of parentheses!")    
 
-    def parse_truth_table(self):
-        pass
+    # different formats for TT in file and not in file (for file, there are no semicolons; without, there are)
+    def parse_truth_table(self, raw_data: str, from_file: bool) -> list[list[bool]]:
+        truth_table: list[list[bool]] = []
+        if from_file:
+            # ...
+            return truth_table
+        
+        return truth_table
 
     # checks only for '(' and ')'
     def __balanced_parentheses(self, input) -> bool:

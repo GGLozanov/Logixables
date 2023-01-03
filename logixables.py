@@ -1,4 +1,4 @@
-import parser as p
+import logix_parser as p
 from models.commands import Command
 import models.logixable as logix_blueprint
 from utils.find_logix_w_fail import find_logixable_with_fail
@@ -48,7 +48,10 @@ def execute_command(original_command: str, subcommands: list[str]):
         logixable = find_logixable_with_fail(subcommands[1], logix_blueprint.logixables)
         print(logixable.generate_truth_table())
     elif command_keyword == Command.FIND:
-        pass
+        # data = 
+        # from_file = 
+        # truth_table = parser.parse_truth_table(data, from_file)
+pass    
     elif command_keyword == Command.VISUALIZE:
         pass
     elif command_keyword == Command.HELP:
@@ -56,7 +59,10 @@ def execute_command(original_command: str, subcommands: list[str]):
         print("Expression defined with DEFINE must have spaces between arguments in functions, operators, and operands (commas between arguments as well if in a function call)! The function definition must also be wrapped in quotes!")
         print("Example postfix syntax definition: 'DEFINE func1(a, b): \"func a, b b &\"' (translates to 'func(a, b) & b')")
         print("In need of postfix reference, please use: https://scanftree.com/Data_Structure/prefix-postfix-infix-online-converter")
-        # TODO: define other commands
+        print("2. SOLVE Syntax: \'SOLVE func_name(1, 0, 1...)'. Solves a definedfunction with given arguments. \nFunction name must be in currently defined functions and take in arguments (1, 0)!")
+        print("3. ALL Syntax: \'ALL func_name'. Displays a function's truth table. \nFunction name must be in currently defined functions!")
+        print("4. FIND Syntax: \'FIND 0 0 0 1; 0 0 1 1...' or 'FIND file_name.txt'. Finds a function with the described truth table. \nTruth table must be a matrix with N rows and columns. The last value at any row is the output of the previous elements in the row (they are arguments).")
+        print("5. VISUALIZE Syntax: \'VISUALIZE func_name'. Visualizes a function's operations in the form of a tree.")
     elif command_keyword == Command.EXIT:
         print('EXITING NOW!')
         exit(0)
