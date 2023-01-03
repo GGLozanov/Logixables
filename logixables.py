@@ -1,4 +1,5 @@
 import logix_parser as p
+import finder as f
 from models.commands import Command
 import models.logixable as logix_blueprint
 from utils.find_logix_w_fail import find_logixable_with_fail
@@ -51,7 +52,16 @@ def execute_command(original_command: str, subcommands: list[str]):
         # data = 
         # from_file = 
         # truth_table = parser.parse_truth_table(data, from_file)
-pass    
+        finder = f.LogixableFinder()
+        test_tt = [[0, 0, 0], [1, 1, 1], [1, 0, 1], [0, 1, 1]]
+        satisfied_definitions = finder.find_logixable_from_truth_table(test_tt, logix_blueprint.logixables)
+        if len(satisfied_definitions) <= 0:
+            print("No functions found to satisfy truth table!")
+            return
+
+        # FIXME: More user-friendly formatting
+        for (idx, definition) in enumerate(satisfied_definitions):
+            print("Satisfactory Definition %s: %s" % (idx + 1, str(definition.expr_tree)))
     elif command_keyword == Command.VISUALIZE:
         pass
     elif command_keyword == Command.HELP:

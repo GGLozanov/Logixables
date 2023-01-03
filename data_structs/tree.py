@@ -21,3 +21,6 @@ class Tree:
 
     def __str__(self) -> str:
         return "{ %s }" % self.root
+
+    def __repr__(self):
+        return self.__str__()

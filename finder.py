@@ -13,30 +13,35 @@ import copy
 # TODO: Support trees with increasingly larger height (DP)
 class LogixableFinder:
     # uses SOP to find applicable functions (a more sophisticated method should be employed for further usage, such as a genetic algorithm -- but this serves well as a base-case scenario)
+    # TODO: Convert TT to binary to save space
     def find_logixable_from_truth_table(self, truth_table: list[list[bool]], cur_logixables: list[logix_blueprint.Logixable]) -> list[logix_blueprint.LogixableDefinition]:
-        if len(truth_table) != 0 and len(truth_table) != len(truth_table[0]):
-            raise ValueError("Truth table must be a matrix!")
+        # further validation is expected to have already been performed by parser
+        if len(truth_table) <= 0:
+            raise ValueError("Truth table cannot be empty!")
 
         logixable_definitions: list[logix_blueprint.LogixableDefinition] = []
 
         max_args = len(truth_table[0])
         allowed_args = string.ascii_lowercase[:max_args]
 
+        # TODO: Use bitwise operations; can make SOP generation faster
         candidate_solutions: list[list[Tree]] = [] # joined by OR or operator at the end
         sop_trees: list[Tree] = []
-        sop_truth_table_rows = list(filter(lambda r: r[len(truth_table) - 1] == 1, truth_table))
+        sop_truth_table_rows = list(filter(lambda r: r[len(truth_table[0]) - 1] == 1, truth_table)) # expect all tt rows to be equal; extract only where TRUE
         for sop_row in sop_truth_table_rows:
-            sop_trees.append(self.__generate_SOP_tree(sop_row), allowed_args)
+            sop_trees.append(self.__generate_SOP_tree(sop_row, allowed_args))
+
+        # TODO: Need Quine-McCluskey simplification here otherwise function-matching won't work
         candidate_solutions.append(sop_trees)
 
-        tree_combinations = list(filter(lambda c: len(c) == 0, combinations(sop_trees)))
+        tree_combinations = list(filter(lambda c: len(c) != 0, combinations(sop_trees)))
         for combination in tree_combinations:
             total_tree = combination[0]
             if len(combination) != 1:
-                total_tree = self.__generate_merger_tree(trees=combination, join_operator=Operator.OR)
+                total_tree = self.__generate_merger_tree_w_trees(combination, Operator.OR)
 
             for logixable in cur_logixables:
-                if self.__compare_expr_tree_with_logixable(total_tree, logixable):
+                if self.__compare_expr_tree_with_logixable(tree=total_tree, logixable=logixable):
                     # extract arg map for total_tree
                     arg_map: HashTable = HashTable(len(allowed_args))
                     self.__extract_tree_arg_mapping_for_logixable(total_tree, logixable, arg_map)
@@ -81,11 +86,11 @@ class LogixableFinder:
 
         return logixable_definitions
 
-    def __extract_tree_arg_mapping_for_logixable(tree: Tree, logixable: logix_blueprint.Logixable, arg_map: HashTable):
+    def __extract_tree_arg_mapping_for_logixable(self, tree: Tree, logixable: logix_blueprint.Logixable, arg_map: HashTable):
         logixable_expr_tree = logixable.definition.expr_tree
         extract_expr_tree_args(tree.root, logixable_expr_tree.root, arg_map)
 
-    def __compare_expr_tree_with_logixable(tree: Tree, logixable: logix_blueprint.Logixable) -> bool:
+    def __compare_expr_tree_with_logixable(self, tree: Tree, logixable: logix_blueprint.Logixable) -> bool:
         logixable_expr_tree = logixable.definition.expr_tree
         return compare_expr_trees(tree.root, logixable_expr_tree.root)
 
@@ -109,25 +114,23 @@ class LogixableFinder:
                 sop_nodes.append(TreeNode([allowed_args[index]], Operator.NOT.value))
         return self.__generate_merger_tree(sop_nodes, Operator.AND)
 
-    def __generate_merger_tree(self, trees: list[Tree], join_operator: Operator) -> Tree:
+    def __generate_merger_tree_w_trees(self, trees: list[Tree], join_operator: Operator) -> Tree:
         nodes = list(map(lambda t: t.root, trees))
         return self.__generate_merger_tree(nodes, join_operator)
 
     def __generate_merger_tree(self, nodes: list[TreeNode], join_operator: Operator) -> Tree:
         if len(nodes) < 2 and join_operator != Operator.NOT:
             raise ValueError("Invalid nodes to construct operator tree")
-        nodes_r = nodes[::-1]
         
         # FIXME: this is a pointless mapping but required to keep using Stack as per requirements
-        stack_head = StackNode(nodes_r[0])
+        stack_head = StackNode(nodes[0])
         nodes_r_stack = Stack(stack_head)
-        for node in nodes_r:
-            new_stack_node = Stack(node)
-            stack_head.prev = new_stack_node
-            stack_head = new_stack_node
+        for node in nodes[1:]:
+            new_stack_node = StackNode(node)
+            nodes_r_stack.push(new_stack_node)
         # -------------------------------------------------------
 
-        while not nodes_r_stack.is_empty():
+        while nodes_r_stack.size > 1:
             if join_operator == Operator.NOT:
                 node = nodes_r_stack.pop().value
                 nodes_r_stack.push(StackNode(TreeNode([node], str(join_operator))))

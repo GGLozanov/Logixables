@@ -148,10 +148,11 @@ class Parser:
     # different formats for TT in file and not in file (for file, there are no semicolons; without, there are)
     def parse_truth_table(self, raw_data: str, from_file: bool) -> list[list[bool]]:
         truth_table: list[list[bool]] = []
+        # TODO: Check all truth table rows of equal length
         if from_file:
             # ...
             return truth_table
-        
+    
         return truth_table
 
     # checks only for '(' and ')'

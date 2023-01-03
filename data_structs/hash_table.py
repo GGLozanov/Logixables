@@ -30,7 +30,7 @@ class HashTable:
             node = node.next
         prev.next = HashTableNode(key, value)
 
-    def find(self, key: any) -> any | None:
+    def find(self, key: any):
         index = self.hash(key)
         node = self.buckets[index]
         while node is not None and node.key != key:

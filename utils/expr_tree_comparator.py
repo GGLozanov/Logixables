@@ -3,23 +3,26 @@ import models.logixable as logix_blueprint
 import models.operators as op
 import data_structs.hash_table as ht
 
-def compare_expr_trees(tree_one_node: tr.TreeNode, tree_two_node: tr.TreeNode,) -> bool:
+def compare_expr_trees(tree_one_node: tr.TreeNode, tree_two_node: tr.TreeNode) -> bool:
     if tree_one_node is None and tree_two_node is None:
         return True
     operators = [operator.value for operator in op.Operator]
  
     if tree_one_node is not None and tree_two_node is not None:
-        if tree_one_node.data != tree_two_node.data:
-            if tree_one_node.data in operators and tree_two_node.data in operators:
+        if tree_one_node.value != tree_two_node.value:
+            if tree_one_node.value in operators and tree_two_node.value in operators:
                 return False
 
-            if isinstance(tree_one_node.data, logix_blueprint.Logixable):
-                return compare_expr_trees(tree_one_node.definition.expr_tree.root, tree_two_node)
-            elif isinstance(tree_two_node.data, logix_blueprint.Logixable):
-                return compare_expr_trees(tree_one_node, tree_two_node.definition.expr_tree.root)
+            if isinstance(tree_one_node.value, logix_blueprint.Logixable):
+                return compare_expr_trees(tree_one_node.value.definition.expr_tree.root, tree_two_node)
+            elif isinstance(tree_two_node.value, logix_blueprint.Logixable):
+                return compare_expr_trees(tree_one_node, tree_two_node.value.definition.expr_tree.root)
 
             return False
-            
+
+        if tree_one_node.children == None and tree_two_node.children == None:
+            return True
+          
         if len(tree_one_node.children) != len(tree_two_node.children):
             return False
         
@@ -40,15 +43,15 @@ def extract_expr_tree_args(tree_one_node: tr.TreeNode, tree_two_node: tr.TreeNod
     operators = [operator.value for operator in op.Operator]
  
     if tree_one_node is not None and tree_two_node is not None:
-        if tree_one_node.data != tree_two_node.data:
-            if tree_one_node.data in operators and tree_two_node.data in operators:
+        if tree_one_node.value != tree_two_node.value:
+            if tree_one_node.value in operators and tree_two_node.value in operators:
                 raise ValueError("AND tree for FIND not equal to logixable tree when check has passed! Can't map args!")
 
-            if isinstance(tree_one_node.data, logix_blueprint.Logixable):
-                extract_expr_tree_args(tree_one_node.definition.expr_tree.root, tree_two_node, mapped_arguments)
+            if isinstance(tree_one_node.value, logix_blueprint.Logixable):
+                extract_expr_tree_args(tree_one_node.value.definition.expr_tree.root, tree_two_node, mapped_arguments)
                 return
-            elif isinstance(tree_two_node.data, logix_blueprint.Logixable):
-                extract_expr_tree_args(tree_one_node, tree_two_node.definition.expr_tree.root, mapped_arguments)
+            elif isinstance(tree_two_node.value, logix_blueprint.Logixable):
+                extract_expr_tree_args(tree_one_node, tree_two_node.value.definition.expr_tree.root, mapped_arguments)
                 return
             raise ValueError("AND tree for FIND not equal to logixable tree when check has passed! Can't map args!")
             
