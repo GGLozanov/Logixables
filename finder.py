@@ -2,12 +2,13 @@ import models.logixable as logix_blueprint
 from data_structs.tree import TreeNode, Tree
 from data_structs.stack import Stack, StackNode
 from data_structs.hash_table import HashTable
-from models.operators import Operator
+from models.operators import Operator, operators
 from utils.algo.generic_combinatorics import combinations
 from utils.algo.expr_tree_comparator import compare_expr_trees, extract_expr_tree_args
 from utils.algo.qm_expression_simplifier import QMExpressionSimplifier, Minterm
 from utils.data.str_count import str_count
 from utils.data.str_join import str_join
+import copy
 import string
 
 # TODO: Support trees with funcs inside funcs and operators inside func args
@@ -35,55 +36,54 @@ class LogixableFinder:
         expression_minterms = sop_simplifier.simplify(allowed_args, [self.__tt_row_to_binary(tt_row) for tt_row in sop_truth_table_rows])
         
         simplified_expression_sop_trees = self.__convert_qm_minterms_to_tree(expression_minterms, allowed_args)
-
         candidate_logixable_pair_solutions.append(simplified_expression_sop_trees) # append original expression
+
+        # this handles matching logixables for AND trees using recursion to match their children
+        # TODO: Support matching for current candidate solutions as done below
+        # TODO: Think of way to optimise ^ as well as current implementation as this is not really memory nor complexity efficient
+        for tree in simplified_expression_sop_trees:
+            new_trees = self.__find_matching_logixable_in_sop(simplified_expression_sop_trees, tree, allowed_args, cur_logixables, True)
+
+            for t in new_trees:
+                sop_trees_new_rec = list(simplified_expression_sop_trees)
+                for s_tree in sop_trees_new_rec:
+                    if tree == s_tree:
+                        sop_trees_new_rec.remove(s_tree)
+
+                sop_trees_new_rec.append(t)
+                candidate_logixable_pair_solutions.append(sop_trees_new_rec)
 
         tree_combinations = list(filter(lambda c: len(c) != 0, combinations(simplified_expression_sop_trees)))
         for combination in tree_combinations:
             total_tree = combination[0]
             if len(combination) != 1:
                 total_tree = self.__generate_merger_tree_w_trees(combination, Operator.OR)
+            new_logixable_solo_tree = self.__find_matching_logixable_in_sop(simplified_expression_sop_trees, total_tree, allowed_args, cur_logixables)
+            if new_logixable_solo_tree != None:
+                # remove every instance of component from trees contained new logixable tree in original SOP expression
+                sop_trees_new = list(simplified_expression_sop_trees)
+                for tree in combination:
+                    if tree in sop_trees_new:
+                        sop_trees_new.remove(tree)
 
-            for logixable in cur_logixables:
-                if self.__compare_expr_tree_with_logixable(tree=total_tree, logixable=logixable):
-                    # extract arg map for total_tree
-                    arg_map: HashTable = HashTable(len(allowed_args))
-                    self.__extract_tree_arg_mapping_for_logixable(total_tree, logixable, arg_map)
-                    valid_arg_order: list[str] = []
+                # add the new logixable tree which replaces the combination that matches the logixable's expression tree to the original SOP expression
+                # order doesn't matter since joined by OR with equal precedence
+                sop_trees_new.append(new_logixable_solo_tree)
+                # add the new SOP expression to the candidate solution
 
-                    # lookup args and associate their positions in a valid way
-                    for arg in logixable.args:
-                        valid_total_tree_arg = arg_map.find(arg)
-                        valid_arg_order.append(valid_total_tree_arg)
+                candidate_logixable_pair_solutions.append(sop_trees_new)
 
-                    # context-updated logixable
-                    new_logixable = logix_blueprint.Logixable(logixable.name, valid_arg_order, total_tree)
-                    # convert logixable to individual tree
-                    new_logixable_solo_tree = Tree(TreeNode(list(map(lambda a: TreeNode(None, a), valid_arg_order)), new_logixable))
-
-                    # remove every instance of component from trees contained new logixable tree in original SOP expression
-                    sop_trees_new = list(simplified_expression_sop_trees)
+                # do the same for all current candidate solutions
+                for cur_candidate_solution in candidate_logixable_pair_solutions:
+                    new_candidate_solution = list(cur_candidate_solution)
+                    has_func = False
                     for tree in combination:
                         if tree in sop_trees_new:
-                            sop_trees_new.remove(tree)
-
-                    # add the new logixable tree which replaces the combination that matches the logixable's expression tree to the original SOP expression
-                    # order doesn't matter since joined by OR with equal precedence
-                    sop_trees_new.append(new_logixable_solo_tree)
-                    # add the new SOP expression to the candidate solution
-                    candidate_logixable_pair_solutions.append(sop_trees_new)
-
-                    # do the same for all current candidate solutions
-                    for cur_candidate_solution in candidate_logixable_pair_solutions:
-                        new_candidate_solution = list(cur_candidate_solution)
-                        has_func = False
-                        for tree in combination:
-                            if tree in sop_trees_new:
-                                has_func = True
-                                new_candidate_solution.remove(tree)
-                        if has_func:
-                            new_candidate_solution.append(new_logixable_solo_tree)
-                            candidate_logixable_pair_solutions.append(new_candidate_solution)
+                            has_func = True
+                            new_candidate_solution.remove(tree)
+                    if has_func:
+                        new_candidate_solution.append(new_logixable_solo_tree)
+                        candidate_logixable_pair_solutions.append(new_candidate_solution)
  
         for candidate_solution in candidate_logixable_pair_solutions:
             candidate_tree = candidate_solution[0]
@@ -92,6 +92,46 @@ class LogixableFinder:
             logixable_definitions.append(logix_blueprint.LogixableDefinition(expr_tree=candidate_tree))
 
         return logixable_definitions
+
+    def __find_matching_logixable_in_sop(self, simplified_expression_sop_trees: list[Tree], cur_total_tree: Tree, allowed_args: list[str], cur_logixables: list[logix_blueprint.Logixable], recursive_enabled = False) -> Tree | list[Tree] | None:
+        for logixable in cur_logixables:
+            if self.__compare_expr_tree_with_logixable(tree=cur_total_tree, logixable=logixable):
+                # extract arg map for total_tree
+                arg_map: HashTable = HashTable(len(allowed_args))
+                self.__extract_tree_arg_mapping_for_logixable(cur_total_tree, logixable, arg_map)
+                valid_arg_order: list[str] = []
+
+                # lookup args and associate their positions in a valid way
+                for arg in logixable.args:
+                    valid_total_tree_arg = arg_map.find(arg)
+                    valid_arg_order.append(valid_total_tree_arg)
+
+                # context-updated logixable
+                new_logixable = logix_blueprint.Logixable(logixable.name, valid_arg_order, cur_total_tree)
+                # convert logixable to individual tree
+                new_logixable_solo_tree = Tree(TreeNode(list(map(lambda a: TreeNode(None, a), valid_arg_order)), new_logixable))
+
+                return new_logixable_solo_tree
+            elif recursive_enabled:
+                total_sop_trees_new = []
+                cur_total_tree_root = cur_total_tree.root
+                for child_idx in range(len(cur_total_tree_root.children)):
+                    child = cur_total_tree_root.children[child_idx]
+                    if child is None:
+                        continue
+
+                    if child.value in operators:
+                        # TODO: Support function inside function; switch to True and parse as parsed after recursive calls
+                        rec_logixable_tree = self.__find_matching_logixable_in_sop(simplified_expression_sop_trees, Tree(child), allowed_args, cur_logixables, False)
+                        if rec_logixable_tree != None:
+                            # FIXME: This isn't really memory-efficient x_x
+                            cur_tree_cpy = copy.deepcopy(cur_total_tree)
+                            del cur_tree_cpy.root.children[child_idx]
+                            cur_tree_cpy.root.children[child_idx] = rec_logixable_tree
+                            total_sop_trees_new.append(cur_tree_cpy)
+                return total_sop_trees_new
+        return None
+
 
     def __tt_row_to_binary(self, tt_row: list[bool]):
         return '0b' + str_join(['1' if x else '0' for x in tt_row], '')
@@ -110,7 +150,7 @@ class LogixableFinder:
             return Tree(TreeNode(None, 'False'))
         
         # only dashes means an expression that's always true
-        if len(expression_minterms) == 1 and str_count(expression_minterms[0].bin_value, "-") == len(self._variables):
+        if len(expression_minterms) == 1 and str_count(expression_minterms[0].bin_value, "-") == len(expression_minterms[0].implicants):
             return Tree(TreeNode(None, 'True'))
 
         # convert to list of treenodes and join with OR

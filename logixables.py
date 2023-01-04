@@ -44,17 +44,24 @@ def execute_command(original_command: str, subcommands: list[str]):
 
         arg_values = func_call.args # this actually contains values
         result = logixable.solve(arg_values)
-        print("RESULT: " + str(result))
+        print("Result: " + str(result))
     elif command_keyword == Command.ALL:
         logixable = find_logixable_with_fail(subcommands[1], logix_blueprint.logixables)
         print(logixable.generate_truth_table())
     elif command_keyword == Command.FIND:
-        # data = 
-        # from_file = 
-        # truth_table = parser.parse_truth_table(data, from_file)
+        # test TTs: 
+        # [[0, 0, 0, 0], [1, 1, 1, 1], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [1, 1, 0, 0], [1, 0, 1, 0], [0, 1, 1, 0]]
+        # [[0, 0, 0], [1, 1, 1], [0, 1, 0], [1, 0, 0]]
+        data = parser.subtract(original_command, subcommands[0] + ' ')
+
+        from_file = file_handler.is_valid_tt_file(data)
+        if from_file:
+            data = file_handler.read_tt_file(data)
+
+        truth_table = parser.parse_truth_table(data, from_file)
         finder = f.LogixableFinder()
-        test_tt = [[0, 0, 0], [1, 1, 1], [1, 0, 1], [0, 1, 1]]
-        satisfied_definitions = finder.find_logixable_from_truth_table(test_tt, logix_blueprint.logixables)
+        satisfied_definitions = finder.find_logixable_from_truth_table(truth_table, logix_blueprint.logixables)
+
         if len(satisfied_definitions) <= 0:
             print("No functions found to satisfy truth table!")
             return
@@ -66,12 +73,12 @@ def execute_command(original_command: str, subcommands: list[str]):
         pass
     elif command_keyword == Command.HELP:
         print("1. DEFINE Syntax: \'DEFINE func_name(arguments): \"postfix expression\"\'. \nAllowed operators: \"&\", \'!\', \'|\'.")
-        print("Expression defined with DEFINE must have spaces between arguments in functions, operators, and operands (commas between arguments as well if in a function call)! The function definition must also be wrapped in quotes!")
-        print("Example postfix syntax definition: 'DEFINE func1(a, b): \"func a, b b &\"' (translates to 'func(a, b) & b')")
+        print(" Note: Expression defined with DEFINE must have spaces between arguments in functions, operators, and operands (commas between arguments as well if in a function call)! The function definition must also be wrapped in quotes!")
+        print(" Example postfix syntax definition: 'DEFINE func1(a, b): \"func a, b b &\"' (translates to 'func(a, b) & b')")
         print("In need of postfix reference, please use: https://scanftree.com/Data_Structure/prefix-postfix-infix-online-converter")
         print("2. SOLVE Syntax: \'SOLVE func_name(1, 0, 1...)'. Solves a definedfunction with given arguments. \nFunction name must be in currently defined functions and take in arguments (1, 0)!")
         print("3. ALL Syntax: \'ALL func_name'. Displays a function's truth table. \nFunction name must be in currently defined functions!")
-        print("4. FIND Syntax: \'FIND 0 0 0 1; 0 0 1 1...' or 'FIND file_name.txt'. Finds a function with the described truth table. \nTruth table must be a matrix with N rows and columns. The last value at any row is the output of the previous elements in the row (they are arguments).")
+        print("4. FIND Syntax: \'FIND 0 0 0: 1; 0 0 1: 1...' or 'FIND file_name.txt'. Finds a function with the described truth table. NOTE: The syntax in the file should be deliminated by a newline character, not a semi-colon. The last value at any row in the truth table is the output of the previous elements in the row (they are arguments).")
         print("5. VISUALIZE Syntax: \'VISUALIZE func_name'. Visualizes a function's operations in the form of a tree.")
     elif command_keyword == Command.EXIT:
         print('EXITING NOW!')

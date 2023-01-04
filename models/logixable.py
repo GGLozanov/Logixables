@@ -1,6 +1,6 @@
 from data_structs.stack import StackNode, Stack
 from data_structs.tree import TreeNode, Tree
-from models.operators import Operator
+from models.operators import Operator, operators
 from utils.data.consume import consume
 from utils.algo.binary_permutations import binary_permutations
 from utils.data.str_join import str_join
@@ -20,7 +20,6 @@ class LogixableDefinition:
     def __build_expression_tree(self, split_postfix: list, allowed_args: list, upper_logixable: 'Logixable' = None, tree_builder: Stack = Stack()) -> TreeNode:
         logixable_names = [logixable.name for logixable in logixables]
 
-        operators = [o.value for o in Operator]
         cur_inner_logixable: Logixable = None
         cur_inner_logixable_arg_count = None
 
@@ -173,8 +172,6 @@ class LogixableDefinition:
 
         if node_children is None or len(node_children) == 0:
             return node_val # data node
-
-        operators = [o.value for o in Operator]
 
         if isinstance(node_val, Logixable):
             return self.__solve_inner_logixable(node_val, allowed_args, arg_values)

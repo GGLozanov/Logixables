@@ -2,6 +2,7 @@ from data_structs.stack import Stack, StackNode
 from models.commands import Command
 from models.operators import Operator
 from models.logixable import *
+from utils.algo.binary_permutations import binary_permutations
 
 # TODO: DEFINE ACCEPTABLE CHARSET FOR ARGS (ASCII?)
 # TODO: HANDLE DIFFERENT PARENTHESES OBFUSCATING INPUT
@@ -146,14 +147,59 @@ class Parser:
             raise ValueError("Function definition has an unbalanced number of parentheses!")    
 
     # different formats for TT in file and not in file (for file, there are no semicolons; without, there are)
+    # TODO: Should trim spaces here.
     def parse_truth_table(self, raw_data: str, from_file: bool) -> list[list[bool]]:
         truth_table: list[list[bool]] = []
-        # TODO: Check all truth table rows of equal length
+        split_char = ';'
         if from_file:
-            # ...
-            return truth_table
-    
-        return truth_table
+            split_char = '\n'
+
+        split_data_initial = self.__split(raw_data, split_char)
+        if len(split_data_initial) <= 1:
+            raise ValueError("Truth table must have at least two rows! Please, check your input!")
+
+        split_data = []
+        for idx in range(len(split_data_initial)):
+            row = split_data_initial[idx]
+            new_row = self.__split(row, ' ')
+            if len(new_row) < 1:
+                raise ValueError("Truth table rows are of insufficient length! There must be at least 2 parameters (one argument and one output)!")
+            last_arg = new_row[-2]
+            if not last_arg:
+                raise ValueError("Arguments cannot be empty!")
+
+            new_row[-2] = last_arg[:-1] # remove ':' character
+            new_row = list(filter(lambda n: n != "", new_row))
+            split_data.append(new_row)
+
+        split_data_l = len(split_data)
+
+        if split_data_l == 0:
+            raise ValueError("Truth table must not be empty and be deliminated by '; ' or a newline character if used from file!")
+        
+        expected_row_length = len(split_data[0])
+
+        if expected_row_length < 1:
+            raise ValueError("Truth table must not be empty and be deliminated by '; ' or a newline character if used from file!")
+
+        max_arg_count = expected_row_length - 1
+
+        if split_data_l != 2 ** max_arg_count:
+            raise ValueError("Truth table must account for all variants of arguments and their outputs!")
+
+        arg_rows = []
+        converted_tt = [[True if num == "1" else False if num == "0" else None for num in row] for row in split_data]
+        for arg_row in converted_tt:
+            if not all(value == False or value == True for value in arg_row):
+                raise ValueError("Truth table must ONLY contain ones and zeroes!")
+            arg_rows.append(arg_row[:-1]) # used to test permutation adherence; convert to int
+
+        arg_perms = binary_permutations(max_arg_count) # generate arguments expected to be in TT
+        for perm in arg_perms:
+            if perm not in arg_rows:
+                raise ValueError("Truth table must account for all variants of arguments and their outputs! Please, check your argument values and make sure there are no duplicates!")
+
+        return converted_tt
 
     # checks only for '(' and ')'
     def __balanced_parentheses(self, input) -> bool:

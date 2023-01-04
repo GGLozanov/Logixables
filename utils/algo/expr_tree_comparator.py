@@ -6,7 +6,7 @@ import data_structs.hash_table as ht
 def compare_expr_trees(tree_one_node: tr.TreeNode, tree_two_node: tr.TreeNode) -> bool:
     if tree_one_node is None and tree_two_node is None:
         return True
-    operators = [operator.value for operator in op.Operator]
+    operators = op.operators
  
     if tree_one_node is not None and tree_two_node is not None:
         if tree_one_node.value != tree_two_node.value:
@@ -43,7 +43,7 @@ def compare_expr_trees(tree_one_node: tr.TreeNode, tree_two_node: tr.TreeNode) -
 def extract_expr_tree_args(tree_one_node: tr.TreeNode, tree_two_node: tr.TreeNode, mapped_arguments: ht.HashTable):
     if tree_one_node is None and tree_two_node is None:
         return
-    operators = [operator.value for operator in op.Operator]
+    operators = op.operators
  
     if tree_one_node is not None and tree_two_node is not None:
         if tree_one_node.value != tree_two_node.value:
@@ -78,4 +78,3 @@ def extract_expr_tree_args(tree_one_node: tr.TreeNode, tree_two_node: tr.TreeNod
         return
 
     raise ValueError("AND tree for FIND not equal to logixable tree when check has passed! Can't map args!")
-    

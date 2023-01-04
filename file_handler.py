@@ -2,9 +2,11 @@ import models.logixable as logix_blueprint
 import data_structs.tree
 import json
 import utils.algo.find_logix_w_fail
+from utils.data.str_ends_with import ends_with
 
 class FileHandler:
     file_name = "logixables"
+    tt_file_extensions = [".csv", ".txt"]
 
     def save_logixables(self, logixables: list[logix_blueprint.Logixable]):
         file = open("%s.txt" % self.file_name, "w")
@@ -35,6 +37,17 @@ class FileHandler:
             return logixables
         except FileNotFoundError:
             return []
+
+    def is_valid_tt_file(self, name: str) -> bool:
+        return ends_with(name, self.tt_file_extensions)
+
+    def read_tt_file(self, name: str):
+        try:
+            file = open("%s" % name, "r+")
+        except FileNotFoundError:
+            raise ValueError("Invalid file name! File cannot be found!")
+        data = file.read()
+        return data
 
     def __read_logixable_tree(self, children: list[dict], value: any, cur_logixables: list[logix_blueprint.Logixable]) -> data_structs.tree.TreeNode:
         if children is None:
