@@ -1,7 +1,7 @@
 import models.logixable as logix_blueprint
 import data_structs.tree
 import json
-import utils.find_logix_w_fail
+import utils.algo.find_logix_w_fail
 
 class FileHandler:
     file_name = "logixables"
@@ -46,7 +46,7 @@ class FileHandler:
             node_val = None
             if "name" in child_val and "args" in child_val:
                 # logixable inside (these are always lower down because there's no way to define otherwise)
-                node_val = utils.find_logix_w_fail.find_logixable_with_fail(child_val["name"], cur_logixables)
+                node_val = utils.algo.find_logix_w_fail.find_logixable_with_fail(child_val["name"], cur_logixables)
             else:
                 node_val = child_val
             if "children" in child and child["children"] is not None:

@@ -14,8 +14,7 @@ class HashTable:
     def __init__(self, capacity: int):
         self.capacity = capacity
         self.size = 0
-        self.buckets: list[HashTableNode | None] = [
-            None]*self.capacity  # empty buckets (e.g. LLs)
+        self.buckets: list[HashTableNode | None] = [None] * self.capacity  # empty buckets (e.g. LLs)
 
     def insert(self, key: any, value: any):
         self.size += 1
@@ -42,7 +41,6 @@ class HashTable:
 
     def hash(self, key):
         hashsum = 0
-
         for idx, c in enumerate(key):
             # Add (index + length of key) ^ (current char code)
             hashsum += (idx + len(key)) ** ord(c)

@@ -18,7 +18,10 @@ def compare_expr_trees(tree_one_node: tr.TreeNode, tree_two_node: tr.TreeNode) -
             elif isinstance(tree_two_node.value, logix_blueprint.Logixable):
                 return compare_expr_trees(tree_one_node, tree_two_node.value.definition.expr_tree.root)
 
-            return False
+            if tree_one_node.value not in operators and tree_two_node.value not in operators:
+                # otherwise data nodes and no one cares about their vals because they'll be mapped
+                return True
+            return False # mismatch between operator and data
 
         if tree_one_node.children == None and tree_two_node.children == None:
             return True
@@ -53,12 +56,21 @@ def extract_expr_tree_args(tree_one_node: tr.TreeNode, tree_two_node: tr.TreeNod
             elif isinstance(tree_two_node.value, logix_blueprint.Logixable):
                 extract_expr_tree_args(tree_one_node, tree_two_node.value.definition.expr_tree.root, mapped_arguments)
                 return
-            raise ValueError("AND tree for FIND not equal to logixable tree when check has passed! Can't map args!")
-            
+
+            # mismatched args
+            if tree_one_node.value not in operators and tree_two_node.value not in operators:
+                mapped_arguments.insert(tree_two_node.value, tree_one_node.value)
+            return
+        
+        # if equal data nodes
+        if tree_one_node.value not in operators and not isinstance(tree_one_node.value, logix_blueprint.Logixable) and tree_two_node.value not in operators and not isinstance(tree_two_node.value, logix_blueprint.Logixable):
+            mapped_arguments.insert(tree_two_node.value, tree_one_node.value)
+
+        if tree_one_node.children == None and tree_two_node.children == None:
+            return
+
         if len(tree_one_node.children) != len(tree_two_node.children):
             raise ValueError("AND tree for FIND not equal to logixable tree when check has passed! Can't map args!")
-
-        mapped_arguments.insert(tree_two_node.value, tree_one_node.value)
 
         for tree_one_child, tree_two_child in zip(tree_one_node.children, tree_two_node.children):
             extract_expr_tree_args(tree_one_child, tree_two_child, mapped_arguments)

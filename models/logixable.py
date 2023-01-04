@@ -1,10 +1,10 @@
 from data_structs.stack import StackNode, Stack
 from data_structs.tree import TreeNode, Tree
 from models.operators import Operator
-from utils.consume import consume
-from utils.binary_permutations import binary_permutations
-from utils.str_join import str_join
-from utils.indexof import index_of
+from utils.data.consume import consume
+from utils.algo.binary_permutations import binary_permutations
+from utils.data.str_join import str_join
+from utils.data.indexof import index_of
 
 class LogixableDefinition:
     def __init__(self, split_postfix: list = [], allowed_args: list = [], expr_tree: Tree | None = None):

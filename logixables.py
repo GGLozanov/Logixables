@@ -2,7 +2,7 @@ import logix_parser as p
 import finder as f
 from models.commands import Command
 import models.logixable as logix_blueprint
-from utils.find_logix_w_fail import find_logixable_with_fail
+from utils.algo.find_logix_w_fail import find_logixable_with_fail
 import file_handler as fh
 import atexit
 
