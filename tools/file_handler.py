@@ -2,7 +2,7 @@ import models.logixable as logix_blueprint
 import data_structs.tree
 import json
 import utils.algo.find_logix_w_fail
-from utils.data.str_ends_with import ends_with
+from utils.data.str_begins_ends_with import ends_with
 
 class FileHandler:
     file_name = "logixables"

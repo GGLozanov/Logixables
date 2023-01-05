@@ -1,13 +1,15 @@
-import logix_parser as p
-import finder as f
+import tools.logix_parser as p
+import tools.finder as f
 from models.commands import Command
 import models.logixable as logix_blueprint
 from utils.algo.find_logix_w_fail import find_logixable_with_fail
-import file_handler as fh
+import tools.file_handler as fh
+import tools.visualizer as vz
 import atexit
 
 parser = p.Parser()
 file_handler = fh.FileHandler()
+visualizer = vz.LogixableVisualizer()
 
 def execute_command(original_command: str, subcommands: list[str]):
     command_keyword = parser.upper(subcommands[0])
@@ -66,11 +68,12 @@ def execute_command(original_command: str, subcommands: list[str]):
             print("No functions found to satisfy truth table!")
             return
 
-        # FIXME: More user-friendly formatting
         for (idx, definition) in enumerate(satisfied_definitions):
-            print("Satisfactory Definition %s: %s" % (idx + 1, str(definition.expr_tree)))
+            print("Satisfactory Definition %s: %s" % (idx + 1, str(definition)))
     elif command_keyword == Command.VISUALIZE:
-        pass
+        logixable_name = subcommands[1]
+        logixable = find_logixable_with_fail(logixable_name, logix_blueprint.logixables)
+        visualizer.visualize(logixable)
     elif command_keyword == Command.HELP:
         print("1. DEFINE Syntax: \'DEFINE func_name(arguments): \"postfix expression\"\'. \nAllowed operators: \"&\", \'!\', \'|\'.")
         print(" Note: Expression defined with DEFINE must have spaces between arguments in functions, operators, and operands (commas between arguments as well if in a function call)! The function definition must also be wrapped in quotes!")

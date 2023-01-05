@@ -44,14 +44,15 @@ class LogixableFinder:
         for tree in simplified_expression_sop_trees:
             new_trees = self.__find_matching_logixable_in_sop(simplified_expression_sop_trees, tree, allowed_args, cur_logixables, True)
 
-            for t in new_trees:
-                sop_trees_new_rec = list(simplified_expression_sop_trees)
-                for s_tree in sop_trees_new_rec:
-                    if tree == s_tree:
-                        sop_trees_new_rec.remove(s_tree)
+            if new_trees != None:
+                for t in new_trees:
+                    sop_trees_new_rec = list(simplified_expression_sop_trees)
+                    for s_tree in sop_trees_new_rec:
+                        if tree == s_tree:
+                            sop_trees_new_rec.remove(s_tree)
 
-                sop_trees_new_rec.append(t)
-                candidate_logixable_pair_solutions.append(sop_trees_new_rec)
+                    sop_trees_new_rec.append(t)
+                    candidate_logixable_pair_solutions.append(sop_trees_new_rec)
 
         tree_combinations = list(filter(lambda c: len(c) != 0, combinations(simplified_expression_sop_trees)))
         for combination in tree_combinations:
@@ -88,7 +89,7 @@ class LogixableFinder:
         for candidate_solution in candidate_logixable_pair_solutions:
             candidate_tree = candidate_solution[0]
             if len(candidate_solution) > 1:
-                candidate_tree = self.__generate_merger_tree(candidate_solution, Operator.OR)
+                candidate_tree = self.__generate_merger_tree_w_trees(candidate_solution, Operator.OR)
             logixable_definitions.append(logix_blueprint.LogixableDefinition(expr_tree=candidate_tree))
 
         return logixable_definitions
@@ -115,6 +116,10 @@ class LogixableFinder:
             elif recursive_enabled:
                 total_sop_trees_new = []
                 cur_total_tree_root = cur_total_tree.root
+
+                if cur_total_tree_root.children == None:
+                    return None
+
                 for child_idx in range(len(cur_total_tree_root.children)):
                     child = cur_total_tree_root.children[child_idx]
                     if child is None:
@@ -126,8 +131,7 @@ class LogixableFinder:
                         if rec_logixable_tree != None:
                             # FIXME: This isn't really memory-efficient x_x
                             cur_tree_cpy = copy.deepcopy(cur_total_tree)
-                            del cur_tree_cpy.root.children[child_idx]
-                            cur_tree_cpy.root.children[child_idx] = rec_logixable_tree
+                            cur_tree_cpy.root.children[child_idx] = rec_logixable_tree.root
                             total_sop_trees_new.append(cur_tree_cpy)
                 return total_sop_trees_new
         return None
@@ -161,7 +165,7 @@ class LogixableFinder:
             for idx in range(len(iter_minterm_val)): # skip out 0b
                 char = iter_minterm_val[idx]
                 if char == "0":
-                    args_stack.push(StackNode(TreeNode([allowed_args[idx]], Operator.NOT)))
+                    args_stack.push(StackNode(TreeNode([TreeNode(None, allowed_args[idx])], Operator.NOT)))
                 elif char == "1":
                     args_stack.push(StackNode(TreeNode(None, allowed_args[idx])))
 

@@ -9,3 +9,10 @@ def ends_with(inp: str, suffx: list[str]) -> bool:
         if __ends_with(inp, suff):
             return True
     return False
+
+def starts_with(inp: str, pref: str) -> bool:
+    pref_l = len(pref)
+    if pref_l < len(inp):
+        inp_at_pref = inp[:pref_l]
+        return inp_at_pref == pref
+    return False

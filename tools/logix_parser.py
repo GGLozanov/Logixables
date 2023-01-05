@@ -3,6 +3,7 @@ from models.commands import Command
 from models.operators import Operator
 from models.logixable import *
 from utils.algo.binary_permutations import binary_permutations
+from utils.data.str_begins_ends_with import starts_with
 
 # TODO: DEFINE ACCEPTABLE CHARSET FOR ARGS (ASCII?)
 # TODO: HANDLE DIFFERENT PARENTHESES OBFUSCATING INPUT
@@ -25,7 +26,6 @@ class Parser:
             raise ValueError('Invalid command argument! Cannot be empty!')
         
         # min requirement is 2 subcommands/inputs
-        
         return subcommands
 
     # parse a function definition from DEFINE and return
@@ -149,7 +149,6 @@ class Parser:
     # different formats for TT in file and not in file (for file, there are no semicolons; without, there are)
     # TODO: Should trim spaces here.
     def parse_truth_table(self, raw_data: str, from_file: bool) -> list[list[bool]]:
-        truth_table: list[list[bool]] = []
         split_char = ';'
         if from_file:
             split_char = '\n'
@@ -248,7 +247,7 @@ class Parser:
         return result
 
     def subtract(self, input: str, replace: str) -> str:
-        if input.startswith(replace):
+        if starts_with(input, replace):
             return input[len(replace):] 
         return input
 

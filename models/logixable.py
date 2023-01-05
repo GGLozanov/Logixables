@@ -11,7 +11,6 @@ class LogixableDefinition:
         self.split_postfix_input = split_postfix
         self.__last_validated_logixable_idx_offset = 0
         self.expr_tree = expr_tree if expr_tree is not None else Tree(self.__build_expression_tree(split_postfix, allowed_args))
-        print(self.expr_tree)
 
     # this method makes me want to commit seppuku
     # TODO: Handle func(a | b, b) etc. by treating operands as functions and going in recursion for them too (this would be hard because of current postfix notation schema)
@@ -232,6 +231,46 @@ class LogixableDefinition:
         solution = node_val.definition.solve(allowed_args, matching_logixable_arg_values)
         memoized_solutions.append((node_val, arg_values, solution))
         return solution
+
+    def __str__(self) -> str:
+        return self.__inorder_repr(self.expr_tree.root)
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def __inorder_repr(self, node: TreeNode) -> str:
+        output = ""
+        if node == None:
+            return
+
+        if isinstance(node.value, Logixable):
+            logixable_name = node.value.name
+            func_declaration = "%s(" % logixable_name
+            for idx, child in enumerate(node.children):
+                if isinstance(child.value, Logixable):
+                    self.__inorder_repr(child)
+                else:
+                    func_declaration += child.value
+                
+                if idx != len(node.children) - 1:
+                    func_declaration += ", "
+            func_declaration += ")"
+            output += func_declaration
+        else:
+            has_children = node.children != None
+            if has_children:
+                if node.children[0].children != None and len(output) > 0 and output[-1] != " ":
+                    output += " "
+                if node.value == Operator.NOT:
+                    output += "%s" % node.value
+                output += self.__inorder_repr(node.children[0])
+
+            if node.value != Operator.NOT:
+                output += "%s " % node.value
+
+            if has_children and node.value != Operator.NOT:
+                output += self.__inorder_repr(node.children[1])
+        return output
 
 class Logixable:
     def __init__(self, name: str, args: list, definition: LogixableDefinition = None) -> None:
