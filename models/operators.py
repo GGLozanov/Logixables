@@ -6,3 +6,5 @@ class Operator(StrEnum):
     NOT = '!'
     LEFT_PARENTHESIS = '('
     RIGHT_PARENTHESIS = ')'
+
+operators = [operator.value for operator in Operator]
