@@ -49,7 +49,7 @@ class FileHandler:
         data = file.read()
         return data
 
-    def __read_logixable_tree(self, children: list[dict], value: any, cur_logixables: list[logix_blueprint.Logixable]) -> data_structs.tree.TreeNode:
+    def __read_logixable_tree(self, children, value: any, cur_logixables: list[logix_blueprint.Logixable]) -> data_structs.tree.TreeNode:
         if children is None:
             return data_structs.tree.TreeNode(None, value)
 
@@ -62,13 +62,18 @@ class FileHandler:
                 node_val = utils.algo.find_logix_w_fail.find_logixable_with_fail(child_val["name"], cur_logixables)
             else:
                 node_val = child_val
-            if "children" in child and child["children"] is not None:
+
+            if "children" in child and child["children"] != None:
                 inner_parsed_children = []
                 for inner_child in child["children"]:
                     inner_parsed_children.append(self.__read_logixable_tree(inner_child["children"], inner_child["value"], cur_logixables))
                 parsed_children.append(data_structs.tree.TreeNode(inner_parsed_children, node_val))
             else:
                 parsed_children.append(data_structs.tree.TreeNode(None, node_val))
+
+        if "name" in value and "args" in value:
+            value = utils.algo.find_logix_w_fail.find_logixable_with_fail(value["name"], cur_logixables)
+        
         upper_node = data_structs.tree.TreeNode(parsed_children, value)
         return upper_node
         
