@@ -20,7 +20,7 @@ class LogixableFinder:
     def find_logixable_from_truth_table(self, truth_table: list[list[bool]], cur_logixables: list[logix_blueprint.Logixable]) -> list[logix_blueprint.LogixableDefinition]:
         # further validation is expected to have already been performed by parser
         if len(truth_table) <= 0:
-            raise ValueError("Truth table cannot be empty!")
+            raise ValueError("Truth table c annot be empty!")
 
         logixable_definitions: list[logix_blueprint.LogixableDefinition] = []
 

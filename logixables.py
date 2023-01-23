@@ -84,7 +84,6 @@ def execute_command(original_command: str, subcommands: list[str]):
         print("4. FIND Syntax: \'FIND 0 0 0: 1; 0 0 1: 1...' or 'FIND file_name.txt'. Finds a function with the described truth table. NOTE: The syntax in the file should be deliminated by a newline character, not a semi-colon. The last value at any row in the truth table is the output of the previous elements in the row (they are arguments).")
         print("5. VISUALIZE Syntax: \'VISUALIZE func_name'. Visualizes a function's operations in the form of a tree.")
     elif command_keyword == Command.EXIT:
-        print('EXITING NOW!')
         exit(0)
 
 def exit_handler():
