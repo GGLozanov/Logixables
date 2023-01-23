@@ -38,7 +38,6 @@ def execute_command(original_command: str, subcommands: list[str]):
         print("Successfully added function with name '%s' to the logixables!" % logixable.name)
     elif command_keyword == Command.SOLVE:
         # this should return a tuple of (func name, func args) but just use logixable as a box/wrapper type
-        # FIXME: Can't use this method if validating arguments w/ charset because charset for SOLVE and DEFINE would differ
         signature = parser.extract_function_declaration_signature(original_command, False)
         func_call = parser.parse_function_signature_solve(signature)
 

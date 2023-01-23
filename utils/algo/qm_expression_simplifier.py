@@ -99,7 +99,10 @@ class QMExpressionSimplifier:
 
         # otherwise, find the most minified solution through combinations
         non_essential_rows = [sop_binary_rows[index] for index in range(len(sop_binary_rows)) if not comboed_rows[index]]
-        return essential_prime_implicants + self.__min_prime_implicant_combination(non_essential_rows, prime_implicants)
+        min_comb = self.__min_prime_implicant_combination(non_essential_rows, prime_implicants)
+        if min_comb is None:
+            return essential_prime_implicants
+        return essential_prime_implicants + min_comb
 
     # group rows based on number of ones in binary
     def __initial_qm_group(self, allowed_arg_count: int, sop_binary_rows: list[str]):
@@ -168,7 +171,8 @@ class QMExpressionSimplifier:
             merge_sort(temp_combination)
 
             if temp_combination == prime_implicant_binary_rows:
-                if len(combination) < len(min_combination):
+                min_combination_l = 0 if min_combination is None else len(min_combination)
+                if len(combination) < min_combination_l:
                     min_combination = combination
         
         return min_combination
