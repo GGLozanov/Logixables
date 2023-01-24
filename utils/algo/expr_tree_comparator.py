@@ -25,6 +25,8 @@ def compare_expr_trees(tree_one_node: tr.TreeNode, tree_two_node: tr.TreeNode) -
 
         if tree_one_node.children == None and tree_two_node.children == None:
             return True
+        elif tree_one_node.children == None or tree_two_node.children == None:
+            return False
           
         if len(tree_one_node.children) != len(tree_two_node.children):
             return False
@@ -67,6 +69,8 @@ def extract_expr_tree_args(tree_one_node: tr.TreeNode, tree_two_node: tr.TreeNod
             mapped_arguments.insert(tree_two_node.value, tree_one_node.value)
 
         if tree_one_node.children == None and tree_two_node.children == None:
+            return
+        elif tree_one_node.children == None or tree_two_node.children == None:
             return
 
         if len(tree_one_node.children) != len(tree_two_node.children):

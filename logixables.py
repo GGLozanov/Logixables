@@ -15,12 +15,14 @@ def execute_command(original_command: str, subcommands: list[str]):
     command_keyword = parser.upper(subcommands[0])
     if command_keyword == Command.DEFINE:
         # ex. inputs:
-        # DEFINE una(a, b, c, d): "a b c d ! & | &"
-        # DEFINE funda(a, b): "a b |"
-        # DEFINE fr(a, b): "funda funda a, b, b funda a, b &"
-        # DEFINE fur(a, b): "funda funda a, b, b b &"  
-        # DEFINE fud(a, b): "a b &" 
-        # DEFINE fd(a, b): "funda a, b fud a, b &"
+        # DEFINE func1(a, b, c, d): "a b c d ! & | &"
+        # DEFINE func2(a, b): "a b |"
+        # DEFINE func(a, b, c): "func2 a, b c |"
+        # DEFINE func5(a, b): "a b &" 
+
+        # DEFINE func3(a, b): "func2 func2 a, b, b func2 a, b &"
+        # DEFINE func4(a, b): "func2 func2 a, b, b b &"  
+        # DEFINE func6(a, b): "func2 a, b func5 a, b &"
 
         logixable_signature = parser.extract_function_declaration_signature(original_command)
         logixable = parser.parse_function_signature(logixable_signature)
@@ -50,9 +52,8 @@ def execute_command(original_command: str, subcommands: list[str]):
         logixable = find_logixable_with_fail(subcommands[1], logix_blueprint.logixables)
         print(logixable.generate_truth_table())
     elif command_keyword == Command.FIND:
-        # test TTs: 
-        # [[0, 0, 0, 0], [1, 1, 1, 1], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [1, 1, 0, 0], [1, 0, 1, 0], [0, 1, 1, 0]]
-        # [[0, 0, 0], [1, 1, 1], [0, 1, 0], [1, 0, 0]]
+        # test TTs:
+        # FIND 0 0 0: 0; 0 0 1: 1; 0 1 0: 0; 1 0 0: 1; 0 1 1: 1; 1 1 0: 0; 1 0 1: 1; 1 1 1: 0
         data = parser.subtract(original_command, subcommands[0] + ' ')
 
         from_file = file_handler.is_valid_tt_file(data)
